@@ -1,7 +1,15 @@
 {
   "name": "snowflake-semantic-explorer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Explore your Snowflake data estate, analyze semantic views with governed metrics, build dashboards, and run agentic deep dives. Works with a standard Snowflake-managed MCP server; no hosting required.",
-  "author": { "name": "Your Team" },
-  "keywords": ["snowflake", "semantic-view", "dashboard", "analytics", "mcp"]
+  "author": {
+    "name": "Your Team"
+  },
+  "keywords": [
+    "snowflake",
+    "semantic-view",
+    "dashboard",
+    "analytics",
+    "mcp"
+  ]
 }
