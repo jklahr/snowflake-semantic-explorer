@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "semantic-explorer-dashboards": {
+      "type": "http",
+      "url": "${SEMANTIC_EXPLORER_URL}"
+    }
+  }
+}

@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Semantic dashboard</title>
+<style>:root{--bg:#f6f6f3;--panel:#fff;--fg:#1f1f1c;--muted:#6c6c66;--line:#e4e4de;--soft:#f0f0eb;--accent:#3b6fb6;--accent-fg:#fff;--good:#1a7f4b;--bad:#b3261e;--warn:#9a6700;--c0:#3b6fb6;--c1:#d98324;--c2:#2a9d8f;--c3:#8e5ea2;--c4:#c0504d;--c5:#7a8b3c;--radius:10px;--shadow:0 6px 24px rgba(0,0,0,.14);--font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1a18;--panel:#242422;--fg:#ecebe6;--muted:#a3a29b;--line:#3a3a36;--soft:#2e2e2b;--accent:#6c9ee0;--accent-fg:#10151c;--good:#5ac98d;--bad:#ff8a80;--warn:#e3b341;--c0:#6c9ee0;--c1:#f0a64f;--c2:#52c2b3;--c3:#b88acb;--c4:#e57f7b;--c5:#a3b560;--shadow:0 6px 24px rgba(0,0,0,.5);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1a1a18;--panel:#242422;--fg:#ecebe6;--muted:#a3a29b;--line:#3a3a36;--soft:#2e2e2b;--accent:#6c9ee0;--accent-fg:#10151c;--good:#5ac98d;--bad:#ff8a80;--warn:#e3b341;--c0:#6c9ee0;--c1:#f0a64f;--c2:#52c2b3;--c3:#b88acb;--c4:#e57f7b;--c5:#a3b560;--shadow:0 6px 24px rgba(0,0,0,.5);color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;font-variant-numeric:tabular-nums}
+body{padding:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+.app{max-width:1280px;margin:0 auto;display:grid;gap:12px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.title{font-size:1.35rem;font-weight:600;margin:0;border-radius:6px;padding:0 2px}
+.title[contenteditable="true"]{outline:2px solid var(--accent);background:var(--panel)}
+.subtitle{color:var(--muted);font-size:.8rem;margin-top:2px}
+.actions{display:flex;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn:disabled{opacity:.5;cursor:default}
+.icon{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.iconbtn{border:none;background:transparent;border-radius:6px;width:26px;height:26px;display:inline-grid;place-items:center;color:var(--muted)}
+.iconbtn:hover,.iconbtn:focus-visible{background:var(--soft);color:var(--fg)}
+.iconbtn.ai{color:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;position:relative}
+.filters .lab{color:var(--muted);font-size:.75rem;margin-right:2px}
+.chip{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--soft);overflow:hidden}
+.chip.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel))}
+.chip button{border:none;background:transparent;padding:4px 8px}
+.chip .main{display:inline-flex;gap:6px;align-items:center;max-width:320px}
+.chip .main b{font-weight:600}
+.chip .main span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip .rm{padding:4px 6px;color:var(--muted)}
+.chip .rm:hover{color:var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px 12px;min-width:0;position:relative;display:flex;flex-direction:column;min-height:120px}
+.tile-h{display:flex;align-items:center;gap:4px;margin-bottom:6px}
+.tile-h h3{font-size:.85rem;font-weight:600;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile-h select{font:inherit;font-size:.75rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 4px;max-width:140px}
+.tile-h .tools{display:flex;gap:0;opacity:.85}
+.tile:hover .tools{opacity:1}
+.kpi-val{font-size:1.9rem;font-weight:500;line-height:1.15;margin:2px 0}
+.kpi-sub{display:flex;gap:4px 8px;align-items:center;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
+.delta{display:inline-block;white-space:nowrap;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--soft)}
+.delta .icon{display:inline-block;vertical-align:-3px;margin-right:2px;width:14px;height:14px}
+.delta.good{color:var(--good)}.delta.bad{color:var(--bad)}.delta.flat{color:var(--muted)}
+.spark{display:block;width:100%;height:36px;margin-top:6px}
+.chartbox{position:relative;flex:1;min-height:200px}
+.chartbox svg{display:block;width:100%}
+.axis text{font-size:10px;fill:var(--muted)}
+.axis line,.grid-l{stroke:var(--line)}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:6px 8px;font-size:.75rem;z-index:20;white-space:nowrap;display:none}
+.tip .sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.tablewrap{overflow:auto;max-height:340px}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{position:sticky;top:0;background:var(--panel);text-align:right;color:var(--muted);font-weight:500;font-size:.72rem;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+tbody tr:hover{background:var(--soft)}
+.skeleton{background:linear-gradient(90deg,var(--soft),var(--line),var(--soft));background-size:200% 100%;animation:sk 1.2s infinite;border-radius:6px;height:100%;min-height:36px}
+@keyframes sk{from{background-position:200% 0}to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skeleton{animation:none}}
+.err{color:var(--muted);display:flex;gap:8px;align-items:center;justify-content:center;flex:1;font-size:.8rem}
+.err i{width:7px;height:7px;border-radius:50%;background:var(--bad);display:inline-block}
+.pop{position:absolute;z-index:40;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:10px 12px;min-width:240px;max-width:min(380px,92vw);font-size:.8rem}
+.pop h4{margin:0 0 6px;font-size:.8rem}
+.pop .row{margin:6px 0}
+.pop .k{color:var(--muted);font-size:.72rem}
+.pop .def{margin:2px 0 0}
+.pop .src{display:inline-block;background:var(--soft);border-radius:6px;padding:1px 6px;font-size:.72rem;word-break:break-all}
+.pop .onto{border-left:3px solid var(--accent);padding-left:8px;margin-top:4px}
+.pop .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.pop label.opt{display:flex;gap:6px;align-items:center;padding:3px 0}
+.pop .list{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 8px;margin:6px 0}
+.pop input[type=text],.pop select,.pop textarea,.modal input[type=text],.modal select,.modal textarea{font:inherit;width:100%;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 7px}
+.pop textarea,.modal textarea{min-height:92px;resize:vertical}
+.pop .inline{display:flex;gap:6px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:60;display:grid;place-items:center;padding:12px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);width:min(560px,100%);max-height:92vh;overflow:auto;padding:14px 16px}
+.modal h2{margin:0 0 10px;font-size:1rem}
+.field{margin:10px 0}
+.field>label{display:block;color:var(--muted);font-size:.72rem;margin-bottom:3px}
+.metricpick{max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 8px;margin-top:4px}
+.metricpick label{display:flex;gap:6px;align-items:center;padding:2px 0}
+.metricpick small{color:var(--muted)}
+.modal .btns{display:flex;gap:8px;justify-content:space-between;margin-top:14px;flex-wrap:wrap}
+.toast{position:fixed;right:14px;bottom:14px;background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:8px;font-size:.8rem;z-index:80;box-shadow:var(--shadow)}
+.muted{color:var(--muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tile{grid-column:span 2!important}.tile.kpi{grid-column:span 1!important}}
+
+.badge{display:inline-block;margin-left:8px;padding:1px 8px;border:1px solid var(--line);border-radius:999px;background:var(--soft);color:var(--muted);font-size:.72rem}
+.tile-note{margin-top:6px;font-size:.72rem;color:var(--muted);line-height:1.4}
+.foot{font-size:.74rem;color:var(--muted);line-height:1.5;padding:2px 2px 10px}
+
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.72rem;color:var(--muted);margin:0 0 4px}
+.legend i{display:inline-block;width:16px;vertical-align:middle;margin-right:5px;border-radius:2px}
+
+.sqlbox{white-space:pre-wrap;word-break:break-all;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--soft);border-radius:6px;padding:6px 8px;max-height:110px;overflow:auto;margin:4px 0 0}
+
+.pop[data-info]{max-height:min(70vh,520px);overflow:auto}
+</style></head>
+<body><div id="root"><div style="padding:24px;color:var(--muted)">Waiting for the dashboard…</div></div>
+<script>window.__EXPLORER_SNAPSHOT__ = __SNAPSHOT_JSON__;
+/* DOM, formatting, filters, SVG charts. No dependencies. */
+const $ = (s, el = document) => el.querySelector(s);
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+    else if (k === 'value') el.value = v;
+    else if (k === 'checked' || k === 'disabled' || k === 'selected' || k === 'contentEditable') el[k] = v;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+const ICONS = {
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/>',
+  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  refresh: '<path d="M20 11a8 8 0 10-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  up: '<path d="M6 14l6-6 6 6"/>', down: '<path d="M6 10l6 6 6-6"/>', flat: '<path d="M6 12h12"/>',
+  chev: '<path d="M7 10l5 5 5-5"/>', filter: '<path d="M4 5h16l-6 8v6l-4-2v-4z"/>',
+};
+function icon(name) {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  // presentation attributes (not only CSS) so the icon is correct in any renderer
+  for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', class: 'icon', width: '16', height: '16', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' })) s.setAttribute(k, v);
+  s.innerHTML = ICONS[name] || '';
+  return s;
+}
+function tlen(node, text) { try { const n = node.getComputedTextLength(); if (n > 0) return n; } catch (_) {} return String(text).length * 6.2; }
+const SVGNS = 'http://www.w3.org/2000/svg';
+function svg(tag, attrs, ...kids) {
+  const el = document.createElementNS(SVGNS, tag);
+  if (tag === 'svg') { el.setAttribute('font-size', '10'); el.setAttribute('font-family', 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif'); }   // not only CSS
+  for (const [k, v] of Object.entries(attrs || {})) if (v != null) el.setAttribute(k, v);
+  for (const k of kids.flat()) if (k != null) el.append(k.nodeType ? k : document.createTextNode(String(k)));
+  return el;
+}
+
+/* ---------- formatting ---------- */
+const nf = {};
+function fmtVal(v, m, full) {
+  if (v === null || v === undefined || Number.isNaN(v)) return '—';
+  const f = (m && m.format) || 'number';
+  if (f === 'percent') return (v * 100).toFixed(1) + '%';
+  const key = f + (full ? 'F' : 'C') + ((m && m.currency) || 'USD');
+  if (!nf[key]) {
+    nf[key] = f === 'currency'
+      ? new Intl.NumberFormat('en', { style: 'currency', currency: (m && m.currency) || 'USD', ...(full ? { maximumFractionDigits: 0 } : { notation: 'compact', maximumFractionDigits: 1 }) })
+      : new Intl.NumberFormat('en', full ? { maximumFractionDigits: 2 } : { notation: 'compact', maximumFractionDigits: 1 });
+  }
+  return nf[key].format(v);
+}
+const fmtPct = (p, d = 1) => (p >= 0 ? '+' : '−') + (Math.abs(p) * 100).toFixed(d) + '%';
+
+/* ---------- filters (mirror of filters.py) ---------- */
+function cmp(a, b) {
+  const fa = Number(a), fb = Number(b);
+  if (a !== '' && b !== '' && !Number.isNaN(fa) && !Number.isNaN(fb)) return fa === fb ? 0 : fa > fb ? 1 : -1;
+  const sa = String(a), sb = String(b); return sa === sb ? 0 : sa > sb ? 1 : -1;
+}
+function filterActive(f) {
+  if (!f.values || !f.values.length) return false;
+  return f.op === 'between' ? (f.values[0] != null || f.values[1] != null) : true;
+}
+function filterMatches(f, v) {
+  if (!filterActive(f)) return true;
+  const s = v == null ? '' : String(v), a = f.values;
+  switch (f.op) {
+    case 'in': return a.map(String).includes(s);
+    case 'not_in': return !a.map(String).includes(s);
+    case 'eq': return s === String(a[0]);
+    case 'ne': return s !== String(a[0]);
+    case 'contains': return s.toLowerCase().includes(String(a[0]).toLowerCase());
+    case 'starts_with': return s.toLowerCase().startsWith(String(a[0]).toLowerCase());
+    case 'between': return (a[0] == null || cmp(v, a[0]) >= 0) && (a[1] == null || cmp(v, a[1]) <= 0);
+    case 'lt': return cmp(v, a[0]) < 0; case 'lte': return cmp(v, a[0]) <= 0;
+    case 'gt': return cmp(v, a[0]) > 0; case 'gte': return cmp(v, a[0]) >= 0;
+  }
+  return true;
+}
+const OP_LABEL = { eq: 'equals', ne: 'does not equal', contains: 'contains', starts_with: 'starts with', in: 'is one of', not_in: 'is not one of', lt: '<', lte: '≤', gt: '>', gte: '≥', between: 'between' };
+function filterText(f, label) {
+  if (!filterActive(f)) return 'All';
+  const v = f.values;
+  if (f.op === 'in') return v.length <= 2 ? v.join(', ') : `${v[0]}, ${v[1]} +${v.length - 2}`;
+  if (f.op === 'between') return `${v[0] ?? '…'} → ${v[1] ?? '…'}`;
+  return `${OP_LABEL[f.op] || f.op} ${f.op === 'not_in' ? v.join(', ') : v[0]}`;
+}
+
+/* ---------- SVG charts ---------- */
+function niceTicks(max, min = 0, n = 4) {
+  if (max === min) max = min + 1;
+  const span = max - min, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= step0) || step0;
+  const lo = Math.floor(min / step) * step, hi = Math.ceil(max / step) * step, out = [];
+  for (let v = lo; v <= hi + step / 2; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+function sparkline(values, color) {
+  const w = 160, hgt = 36, pts = values.map((v, i) => [i, v]).filter(p => p[1] != null);
+  const s = svg('svg', { viewBox: `0 0 ${w} ${hgt}`, class: 'spark', preserveAspectRatio: 'none', 'aria-hidden': 'true' });
+  if (pts.length < 2) return s;
+  const ys = pts.map(p => p[1]), lo = Math.min(...ys), hi = Math.max(...ys), n = values.length - 1;
+  const X = i => (i / n) * (w - 4) + 2, Y = v => hi === lo ? hgt / 2 : hgt - 3 - ((v - lo) / (hi - lo)) * (hgt - 8);
+  s.append(svg('path', { d: pts.map((p, k) => (k ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join(' '), fill: 'none', stroke: color, 'stroke-width': 1.8, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'vector-effect': 'non-scaling-stroke' }));
+  const last = pts[pts.length - 1];
+  s.append(svg('circle', { cx: X(last[0]), cy: Y(last[1]), r: 2.6, fill: color }));
+  return s;
+}
+function tipEl(box) { let t = box.querySelector('.tip'); if (!t) { t = h('div', { class: 'tip' }); box.append(t); } return t; }
+function showTip(box, t, rows, title, ev) {
+  t.replaceChildren(h('div', { class: 'muted', text: title }), ...rows.map(r => h('div', null, r.color ? h('span', { class: 'sw', style: { background: r.color } }) : null, r.name + ': ', h('b', { text: r.value }))));
+  t.style.display = 'block';
+  const b = box.getBoundingClientRect();
+  let x = ev.clientX - b.left + 12; if (x + t.offsetWidth > b.width) x = ev.clientX - b.left - t.offsetWidth - 12;
+  t.style.left = Math.max(0, x) + 'px'; t.style.top = Math.max(0, ev.clientY - b.top - 8) + 'px';
+}
+function lineChart(box, labels, series, colors) {
+  // series: [{name, values[], fmt(v), dashed}]
+  const W = Math.max(box.clientWidth, 260), H = 230, m = { t: 8, r: 10, b: 24, l: 8 };
+  const all = series.flatMap(s => s.values).filter(v => v != null);
+  const s = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Line chart' });
+  box.replaceChildren(...(series.length > 1 ? [h('div', { class: 'legend' }, series.map((sr, k) => h('span', null, h('i', { style: { background: sr.dashed ? 'transparent' : colors[k % colors.length], borderTop: sr.dashed ? '2px dashed ' + colors[k % colors.length] : 'none', height: sr.dashed ? '0' : '3px' } }), sr.name)))] : []), s);
+  if (!all.length || labels.length < 1) { box.append(h('div', { class: 'err', text: 'No data' })); return; }
+  const ticks = niceTicks(Math.max(...all), Math.min(0, ...all)), lo = ticks[0], hi = ticks[ticks.length - 1];
+  const tmp = svg('text', { class: 'axis' }); s.append(tmp);
+  let lw = 0; ticks.forEach(t => { tmp.textContent = series[0].axis(t); lw = Math.max(lw, tlen(tmp, tmp.textContent)); }); tmp.remove();
+  m.l = Math.ceil(lw) + 12;
+  const X = i => labels.length === 1 ? (m.l + W - m.r) / 2 : m.l + (i / (labels.length - 1)) * (W - m.l - m.r);
+  const Y = v => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+  const ax = svg('g', { class: 'axis' }); s.append(ax);
+  ticks.forEach(t => { ax.append(svg('line', { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), class: 'grid-l' }), svg('text', { x: m.l - 6, y: Y(t) + 3, 'text-anchor': 'end' }, series[0].axis(t))); });
+  const every = Math.max(1, Math.ceil(labels.length / Math.max(2, Math.floor((W - m.l) / 70))));
+  labels.forEach((l, i) => { if (i % every === 0 || i === labels.length - 1) { if (i === labels.length - 1 && i % every !== 0 && (i - Math.floor(i / every) * every) < every * 0.6) return; ax.append(svg('text', { x: X(i), y: H - 6, 'text-anchor': 'middle' }, l)); } });
+  series.forEach((sr, k) => {
+    let d = '', pen = false;
+    sr.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' '; pen = true; });
+    s.append(svg('path', { d, fill: 'none', stroke: colors[k % colors.length], 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'stroke-dasharray': sr.dashed ? '5 4' : null }));
+  });
+  const rule = svg('line', { y1: m.t, y2: H - m.b, stroke: 'var(--muted)', 'stroke-dasharray': '2 3', style: 'display:none' }); s.append(rule);
+  const dots = series.map((_, k) => svg('circle', { r: 3.5, fill: colors[k % colors.length], style: 'display:none' })); dots.forEach(d => s.append(d));
+  const t = tipEl(box);
+  s.addEventListener('mousemove', ev => {
+    const r = s.getBoundingClientRect(), x = (ev.clientX - r.left) * (W / r.width);
+    const i = Math.max(0, Math.min(labels.length - 1, Math.round(labels.length === 1 ? 0 : ((x - m.l) / (W - m.l - m.r)) * (labels.length - 1))));
+    rule.setAttribute('x1', X(i)); rule.setAttribute('x2', X(i)); rule.style.display = '';
+    series.forEach((sr, k) => { const v = sr.values[i]; if (v == null) dots[k].style.display = 'none'; else { dots[k].setAttribute('cx', X(i)); dots[k].setAttribute('cy', Y(v)); dots[k].style.display = ''; } });
+    showTip(box, t, series.map((sr, k) => ({ color: colors[k % colors.length], name: sr.name, value: sr.fmt(sr.values[i]) })), labels[i], ev);
+  });
+  s.addEventListener('mouseleave', () => { rule.style.display = 'none'; dots.forEach(d => d.style.display = 'none'); t.style.display = 'none'; });
+}
+function barChart(box, labels, values, fmt, axisFmt, color, horizontal) {
+  const n = labels.length, W = Math.max(box.clientWidth, 260);
+  const s = svg('svg', { role: 'img', 'aria-label': 'Bar chart' });
+  box.replaceChildren(s);
+  if (!n) { box.append(h('div', { class: 'err', text: 'No data' })); return; }
+  const t = tipEl(box), vmax = Math.max(...values.map(v => v || 0), 0) || 1;
+  if (horizontal) {
+    const rowH = 24, H = n * rowH + 8; s.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const tmp = svg('text', { class: 'axis' }); s.append(tmp);
+    let lw = 0; labels.forEach(l => { tmp.textContent = l; lw = Math.max(lw, tlen(tmp, l)); }); lw = Math.min(Math.ceil(lw) + 8, W * 0.4);
+    let vw = 0; values.forEach(v => { tmp.textContent = fmt(v); vw = Math.max(vw, tlen(tmp, tmp.textContent)); }); tmp.remove(); vw = Math.ceil(vw) + 8;
+    const X = v => lw + (v / vmax) * Math.max(10, W - lw - vw - 6);
+    labels.forEach((l, i) => {
+      const y = i * rowH + 4, ax = svg('g', { class: 'axis' });
+      ax.append(svg('text', { x: lw - 6, y: y + 12, 'text-anchor': 'end', style: 'fill:var(--fg)' }, l.length > 28 ? l.slice(0, 27) + '…' : l));
+      s.append(ax, svg('rect', { x: lw, y: y + 2, width: Math.max(1, X(values[i] || 0) - lw), height: 15, rx: 3, fill: color }),
+        svg('text', { x: X(values[i] || 0) + 5, y: y + 13, style: 'font-size:10px;fill:var(--muted)' }, fmt(values[i])));
+      const hit = svg('rect', { x: 0, y, width: W, height: rowH, fill: 'transparent' });
+      hit.addEventListener('mousemove', ev => showTip(box, t, [{ name: 'Value', value: fmt(values[i], true) }], l, ev));
+      hit.addEventListener('mouseleave', () => t.style.display = 'none'); s.append(hit);
+    });
+  } else {
+    const H = 230, m = { t: 8, r: 8, b: 40, l: 8 }, ticks = niceTicks(vmax), hi = ticks[ticks.length - 1];
+    const tmp = svg('text', { class: 'axis' }); s.append(tmp); let lw = 0; ticks.forEach(v => { tmp.textContent = axisFmt(v); lw = Math.max(lw, tlen(tmp, tmp.textContent)); }); tmp.remove(); m.l = Math.ceil(lw) + 12;
+    s.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const bw = (W - m.l - m.r) / n, Y = v => m.t + (1 - v / hi) * (H - m.t - m.b), ax = svg('g', { class: 'axis' }); s.append(ax);
+    ticks.forEach(v => ax.append(svg('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), class: 'grid-l' }), svg('text', { x: m.l - 6, y: Y(v) + 3, 'text-anchor': 'end' }, axisFmt(v))));
+    const every = Math.ceil(n / Math.max(1, Math.floor((W - m.l) / 60)));
+    labels.forEach((l, i) => {
+      const x = m.l + i * bw + bw * 0.15, w = bw * 0.7;
+      s.append(svg('rect', { x, y: Y(values[i] || 0), width: w, height: Math.max(0, H - m.b - Y(values[i] || 0)), rx: 3, fill: color }));
+      if (i % every === 0) ax.append(svg('text', { x: x + w / 2, y: H - m.b + 14, 'text-anchor': 'middle' }, l.length > 10 ? l.slice(0, 9) + '…' : l));
+      const hit = svg('rect', { x: m.l + i * bw, y: 0, width: bw, height: H - m.b, fill: 'transparent' });
+      hit.addEventListener('mousemove', ev => showTip(box, t, [{ name: 'Value', value: fmt(values[i], true) }], l, ev));
+      hit.addEventListener('mouseleave', () => t.style.display = 'none'); s.append(hit);
+    });
+  }
+}
+
+/* Snapshot transport: no server. The file embeds the data; this engine answers the same
+   "tool calls" the live server would (query, values, definitions, edits) inside the page. */
+const LocalTransport = (() => {
+  const SNAP = window.__EXPLORER_SNAPSHOT__;
+  const KEY = 'explorer:' + (SNAP.build_id || SNAP.spec.id);
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const store = { get() { try { return window.localStorage.getItem(KEY); } catch (_) { return null; } },
+                  set(v) { try { window.localStorage.setItem(KEY, v); } catch (_) {} },
+                  del() { try { window.localStorage.removeItem(KEY); } catch (_) {} } };
+  let spec = clone(SNAP.spec), edited = false;
+  const saved = store.get();
+  if (saved) { try { const s = JSON.parse(saved); if (s && s.tiles) { spec = s; edited = true; } } catch (_) {} }
+
+  const datasets = SNAP.datasets.map(ds => {
+    const idx = {}; ds.columns.forEach((c, i) => { idx[c] = i; });
+    return { ...ds, idx, dimSet: new Set(ds.dimensions), metSet: new Set(ds.metrics) };
+  });
+  const metricDef = n => spec.catalog.metrics.find(m => m.name === n);
+  const dimDef = n => spec.catalog.dimensions.find(d => d.name === n);
+  const fail = m => { throw new Error(m); };
+
+  /* ---- query ---- */
+  function baseNeeds(metrics) {
+    const need = new Set();
+    for (const m of metrics) {
+      const d = metricDef(m); if (!d) fail(`unknown metric '${m}'`);
+      if (d.num && d.den) { need.add(d.num); need.add(d.den); } else need.add(m);
+    }
+    return need;
+  }
+  function pickDataset(metrics, dims, filters) {
+    const need = [...baseNeeds(metrics)];
+    const cands = datasets.filter(ds => need.every(n => ds.metSet.has(n)) && dims.every(d => ds.dimSet.has(d))
+      && (!ds.partial || (dims.length === ds.dimensions.length)));      // a partial table (e.g. top 25) only answers at its own grain
+    if (!cands.length) fail(`This snapshot does not contain ${[...metrics].join(', ')} by ${dims.join(', ') || 'total'}. Ask Claude to rebuild it with that cut.`);
+    const miss = ds => filters.filter(f => !ds.dimSet.has(f.dimension)).length;
+    cands.sort((a, b) => miss(a) - miss(b) || a.rows.length - b.rows.length);
+    const ds = cands[0];
+    return { ds, ignored: filters.filter(f => !ds.dimSet.has(f.dimension)).map(f => f.dimension) };
+  }
+  function dashboardQuery({ metrics, dimensions = [], filters = [], order_by, limit = 500 }) {
+    if (!metrics || !metrics.length) fail('at least one metric is required');
+    for (const d of dimensions) if (!dimDef(d)) fail(`unknown dimension '${d}'`);
+    const flt = filters.map(normalizeFilter).filter(filterActive);
+    const { ds, ignored } = pickDataset(metrics, dimensions, flt);
+    const need = [...baseNeeds(metrics)], ni = need.map(n => ds.idx[n]), di = dimensions.map(d => ds.idx[d]);
+    const fi = flt.filter(f => ds.dimSet.has(f.dimension)).map(f => [ds.idx[f.dimension], f]);
+    const groups = new Map();
+    outer: for (const row of ds.rows) {
+      for (const [i, f] of fi) if (!filterMatches(f, row[i])) continue outer;
+      const key = di.length === 1 ? String(row[di[0]]) : di.map(i => row[i]).join('\u0001');
+      let g = groups.get(key);
+      if (!g) { g = { dv: di.map(i => row[i]), sum: new Float64Array(need.length), seen: new Uint8Array(need.length) }; groups.set(key, g); }
+      for (let k = 0; k < ni.length; k++) { const v = row[ni[k]]; if (v !== null && v !== undefined) { g.sum[k] += v; g.seen[k] = 1; } }
+    }
+    const pos = Object.fromEntries(need.map((n, k) => [n, k]));
+    let rows = [...groups.values()].map(g => {
+      const r = {}; dimensions.forEach((d, i) => { r[d] = g.dv[i]; });
+      for (const m of metrics) {
+        const d = metricDef(m);
+        if (d.num && d.den) { const den = g.sum[pos[d.den]]; r[m] = den ? g.sum[pos[d.num]] / den : null; }
+        else r[m] = g.seen[pos[m]] ? Math.round(g.sum[pos[m]] * 100) / 100 : null;
+      }
+      return r;
+    });
+    const order = (order_by && order_by.length ? order_by : (dimensions.length ? [{ name: dimensions[0], direction: 'ASC' }] : []))
+      .filter(o => dimensions.includes(o.name) || metrics.includes(o.name));
+    for (const o of [...order].reverse()) {
+      const dir = String(o.direction || 'ASC').toUpperCase() === 'DESC' ? -1 : 1;
+      rows.sort((a, b) => { const x = a[o.name], y = b[o.name]; if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return cmp(x, y) * dir; });
+    }
+    const lim = Math.max(1, Math.min(+limit || 500, 5000));
+    return { columns: [...dimensions, ...metrics], rows: rows.slice(0, lim), row_count: Math.min(rows.length, lim), truncated: rows.length > lim,
+             ignored_filters: ignored, note: ds.note || null, dataset: ds.id, sql: ds.sql || null };
+  }
+  function dimensionValues({ dimension, search, limit = 50 }) {
+    if (!dimDef(dimension)) fail(`unknown dimension '${dimension}'`);
+    const set = new Set();
+    for (const ds of datasets) if (ds.dimSet.has(dimension)) { const i = ds.idx[dimension]; for (const r of ds.rows) set.add(r[i]); }
+    let vals = [...set].filter(v => v !== null && v !== undefined).sort((a, b) => cmp(a, b));
+    if (search) { const q = String(search).toLowerCase(); vals = vals.filter(v => String(v).toLowerCase().includes(q)); }
+    return { dimension, values: vals.slice(0, Math.max(1, Math.min(+limit || 50, 1000))), total: vals.length };
+  }
+  function getDefinitions({ metrics = [], dimensions = [] }) {
+    const d = spec.definitions || { metrics: {}, dimensions: {} };
+    const pick = (src, names) => Object.fromEntries(names.filter(n => src && src[n]).map(n => [n, src[n]]));
+    return { metrics: pick(d.metrics, metrics), dimensions: pick(d.dimensions, dimensions) };
+  }
+
+  /* ---- edits (same operations as the live update_dashboard tool) ---- */
+  const OPS = new Set(['in', 'not_in', 'eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'between', 'contains', 'starts_with']);
+  const SINGLE = new Set(['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'contains', 'starts_with']);
+  const TILE_TYPES = new Set(['kpi', 'line', 'bar', 'hbar', 'table']);
+  const POPS = new Set(['none', 'DoD', 'WoW', 'MoM', 'QoQ', 'YoY']);
+  function normalizeFilter(f) {
+    if (!f || typeof f !== 'object' || !f.dimension) fail('filter needs a dimension');
+    const op = f.op || 'in', values = f.values || [];
+    if (!OPS.has(op)) fail(`unknown filter op '${op}'`);
+    if (!Array.isArray(values) || values.length > 500) fail('filter values must be a list of at most 500 items');
+    if (op === 'between' && values.length !== 2) fail('between needs exactly two values (use null for an open end)');
+    if (SINGLE.has(op) && values.length > 1) fail(`op '${op}' takes one value`);
+    if (!dimDef(f.dimension)) fail(`unknown dimension '${f.dimension}' in this snapshot`);
+    return { dimension: f.dimension, op, values };
+  }
+  function checkTile(t) {
+    if (!TILE_TYPES.has(t.type)) fail('tile type must be one of ' + [...TILE_TYPES].sort().join(', '));
+    t = { ...t };
+    const ms = t.type === 'kpi' && t.metric ? [t.metric] : [...(t.metrics || [])];
+    if (!ms.length) fail('tile needs a metric (kpi) or metrics (charts and tables)');
+    if (t.compare) ms.push(typeof t.compare === 'object' ? t.compare.metric : t.compare);
+    for (const m of ms) if (!metricDef(m)) fail(`unknown metric '${m}'`);
+    for (const k of ['x', 'groupBy']) if (t[k] && !dimDef(t[k])) fail(`unknown dimension '${t[k]}'`);
+    if ((t.type === 'bar' || t.type === 'hbar') && !t.x) fail('bar charts need x (a dimension)');
+    if (t.type === 'table' && !t.groupBy) fail('tables need groupBy (a dimension)');
+    if (t.type === 'line' && !t.x) fail('line charts need x (normally the time dimension)');
+    if (!POPS.has(t.pop || 'none')) fail('pop must be one of ' + [...POPS].sort().join(', '));
+    t.span = Math.max(2, Math.min(12, parseInt(t.span || 4, 10) || 4));
+    t.title = String(t.title || 'Untitled').slice(0, 120);
+    return t;
+  }
+  function updateDashboard({ operations }) {
+    const next = clone(spec);
+    (operations || []).forEach((op, i) => {
+      const need = k => { if (op[k] === undefined) fail(`operation ${i} (${op.op}) is missing '${k}'`); return op[k]; };
+      switch (op.op) {
+        case 'set_title': next.title = String(need('title')).slice(0, 120); break;
+        case 'add_tile': { const t = checkTile(need('tile')); t.id = 't' + next.next_tile++; const at = op.index == null ? next.tiles.length : +op.index; next.tiles.splice(at, 0, t); break; }
+        case 'update_tile': {
+          const cur = next.tiles.find(t => t.id === need('id')); if (!cur) fail(`no tile '${op.id}'`);
+          const ch = need('changes'), merged = { ...cur, ...ch };
+          for (const k of Object.keys(merged)) if (merged[k] === null) delete merged[k];
+          if (ch.type === 'kpi' && cur.metrics && !merged.metric) merged.metric = cur.metrics[0];
+          if (merged.type !== 'kpi' && merged.metric && !('metrics' in ch)) { merged.metrics = [merged.metric]; delete merged.metric; }
+          next.tiles[next.tiles.indexOf(cur)] = checkTile(merged); break;
+        }
+        case 'remove_tile': { const n = next.tiles.length; next.tiles = next.tiles.filter(t => t.id !== need('id')); if (next.tiles.length === n) fail(`no tile '${op.id}'`); break; }
+        case 'move_tile': { const t = next.tiles.find(x => x.id === need('id')); if (!t) fail(`no tile '${op.id}'`); next.tiles.splice(next.tiles.indexOf(t), 1); next.tiles.splice(Math.max(0, Math.min(next.tiles.length, +need('index'))), 0, t); break; }
+        case 'set_filter': { const nf = normalizeFilter(need('filter')); const j = next.filters.findIndex(f => f.dimension === nf.dimension); if (j >= 0) next.filters[j] = nf; else next.filters.push(nf); break; }
+        case 'remove_filter': next.filters = next.filters.filter(f => f.dimension !== need('dimension')); break;
+        default: fail(`unknown operation '${op.op}'`);
+      }
+    });
+    next.version = (spec.version || 1) + 1;
+    spec = next; edited = true; store.set(JSON.stringify(spec));
+    return { dashboard_id: spec.id, version: spec.version, spec: clone(spec) };
+  }
+
+  /* ---- transport interface ---- */
+  const ROUTES = { dashboard_query: dashboardQuery, dimension_values: dimensionValues, get_definitions: getDefinitions, update_dashboard: updateDashboard,
+                   get_dashboard: () => ({ changed: true, version: spec.version, spec: clone(spec) }) };
+  return {
+    kind: 'snapshot', poll: false, info: { built_at: SNAP.built_at, exported_by: SNAP.exported_by, build_id: SNAP.build_id },
+    get edited() { return edited; },
+    async call(name, args) { const f = ROUTES[name]; if (!f) fail(`not available in a snapshot: ${name}`); return f(args || {}); },
+    reset() { store.del(); spec = clone(SNAP.spec); edited = false; return clone(spec); },
+    /* "Ask Claude": use the chat bridge if the page is hosted in one, else copy to the clipboard */
+    async send(text) {
+      if (typeof window.sendPrompt === 'function') { window.sendPrompt(text); return 'sent'; }
+      try { await navigator.clipboard.writeText(text); return 'copied'; } catch (_) {}
+      try { const t = h('textarea', { style: { position: 'fixed', opacity: 0 } }); t.value = text; document.body.append(t); t.select(); const ok = document.execCommand('copy'); t.remove(); if (ok) return 'copied'; } catch (_) {}
+      throw new Error('copy is not available here; select the text and copy it yourself');
+    },
+    context() {},
+    async boot(cb) { cb.onSpec(clone(spec)); },
+  };
+})();
+
+/* Semantic Explorer dashboard app (MCP App). */
+const S = { spec: null, data: {}, errors: {}, tileMetric: {}, sort: {}, gen: 0, busy: false, pop: null, popAnchor: null, mounts: [], toastT: null, ctxT: null };
+const POP_LABEL = { DoD: 'DoD', WoW: 'WoW', MoM: 'MoM', QoQ: 'QoQ', YoY: 'YoY', none: 'None' };
+const COLORS = () => ['--c0', '--c1', '--c2', '--c3', '--c4', '--c5'].map(v => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#3b6fb6');
+
+/* ---------- server calls ---------- */
+const T = LocalTransport;   // McpTransport (live) or LocalTransport (snapshot), chosen at build time
+const call = (name, args) => T.call(name, args);
+const view = () => S.spec.view;
+const metricOf = n => (S.spec.catalog.metrics.find(m => m.name === n)) || { name: n, label: n, format: 'number' };
+const dimOf = n => (S.spec.catalog.dimensions.find(d => d.name === n)) || { name: n, label: n, type: 'category' };
+const timeDim = () => S.spec.time && S.spec.time.dimension;
+const timeFilter = () => S.spec.filters.find(f => f.dimension === timeDim());
+const cmpMetric = t => t.compare ? (typeof t.compare === 'string' ? t.compare : t.compare.metric) : null;
+const cmpLabel = t => (t.compare && t.compare.label) || 'vs plan';
+const shortP = p => String(p).replace(/^FY(\d{2})(\d{2})-P/, 'FY$2 P');
+
+async function persist(ops) {
+  if (S.busy) return;
+  S.busy = true;
+  try {
+    const r = await call('update_dashboard', { dashboard_id: S.spec.id, operations: ops, expected_version: S.spec.version });
+    setSpec(r.spec);
+  } catch (e) {
+    toast('Could not save: ' + e.message);
+    try { const r = await call('get_dashboard', { dashboard_id: S.spec.id }); setSpec(r.spec); } catch (_) {}
+  } finally { S.busy = false; }
+}
+
+/* ---------- query planning ---------- */
+function seriesFilters() {
+  const tf = timeFilter(), out = S.spec.filters.filter(f => f !== tf);
+  if (tf) {
+    if (tf.op === 'between') { if (tf.values && tf.values[1] != null) out.push({ dimension: tf.dimension, op: 'lte', values: [tf.values[1]] }); }
+    else out.push(tf);
+  }
+  return out;
+}
+function plan() {
+  const q = {}, t = S.spec.time, ser = new Set();
+  for (const tile of S.spec.tiles) {
+    const ms = tile.type === 'kpi' ? [tile.metric] : tile.metrics || [];
+    const cm = cmpMetric(tile);
+    if (tile.type === 'kpi') {
+      const total = !t || tile.value_mode === 'total';
+      if (total) q['total:' + tile.id] = { metrics: [tile.metric, ...(cm ? [cm] : [])], dimensions: [], filters: S.spec.filters, limit: 1 };
+      if (t && (!total || tile.sparkline || tile.pop !== 'none')) [tile.metric, ...(cm ? [cm] : [])].forEach(x => ser.add(x));
+    } else if (tile.type === 'line') {
+      if (t) { ms.forEach(x => ser.add(x)); if (cm) ser.add(cm); }
+    } else {
+      const dim = tile.type === 'table' ? tile.groupBy : tile.x;
+      q['tile:' + tile.id] = { metrics: ms, dimensions: [dim], filters: S.spec.filters, order_by: [{ name: ms[0], direction: 'DESC' }], limit: tile.limit || 25 };
+    }
+  }
+  if (ser.size && t) q.series = { metrics: [...ser], dimensions: [t.dimension], filters: seriesFilters(), order_by: [{ name: t.dimension, direction: 'ASC' }], limit: 1000 };
+  return q;
+}
+async function fetchAll() {
+  const gen = ++S.gen, q = plan();
+  S.data = {}; S.errors = {};
+  renderGrid();
+  await Promise.all(Object.entries(q).map(async ([key, args]) => {
+    try {
+      const r = await call('dashboard_query', { view: view(), ...args });
+      if (gen !== S.gen) return;
+      S.data[key] = r;
+    } catch (e) { if (gen === S.gen) S.errors[key] = e.message; }
+    if (gen === S.gen) renderGrid();
+  }));
+  if (gen === S.gen) { renderGrid(); scheduleContext(); }
+}
+
+/* ---------- derived KPI model ---------- */
+function lagFor(pop, grain, ppy) {
+  switch (pop) {
+    case 'YoY': return ppy || 12;
+    case 'MoM': return (grain === 'month' || grain === 'period') ? 1 : null;
+    case 'QoQ': return grain === 'quarter' ? 1 : (grain === 'month' || grain === 'period') ? 3 : null;
+    case 'WoW': return grain === 'week' ? 1 : grain === 'day' ? 7 : null;
+    case 'DoD': return grain === 'day' ? 1 : null;
+  }
+  return null;
+}
+function priorIndex(periods, i, pop) {
+  const t = S.spec.time, lag = lagFor(pop, t.grain, t.periods_per_year);
+  if (lag == null) return -1;
+  if (pop === 'YoY') {
+    const cand = String(periods[i]).replace(/\d{4}/, y => String(+y - 1)), j = periods.indexOf(cand);
+    if (j >= 0) return j;
+  }
+  const j = i - lag; return j >= 0 ? j : -1;
+}
+function kpiModel(tile) {
+  const t = S.spec.time, cm = cmpMetric(tile);
+  const total = !t || tile.value_mode === 'total';
+  const ser = S.data.series, tf = timeFilter();
+  const spark = (periods, arr, end) => arr.slice(Math.max(0, end - 12), end + 1);
+  if (total) {
+    const d = S.data['total:' + tile.id]; if (!d) return null;
+    const row = d.rows[0] || {}, v = row[tile.metric], out = { value: v, period: t ? 'Selected range' : '' };
+    if (cm && row[cm]) out.cmp = { pct: (v - row[cm]) / Math.abs(row[cm]), label: cmpLabel(tile) };
+    if (t && tile.sparkline && ser) {
+      const rows = ser.rows.filter(r => !tf || filterMatches(tf, r[t.dimension]));
+      out.spark = rows.map(r => r[tile.metric]);
+    }
+    return out;
+  }
+  if (!ser) return null;
+  const periods = ser.rows.map(r => r[t.dimension]), arr = ser.rows.map(r => r[tile.metric]);
+  let cur = -1; for (let i = arr.length - 1; i >= 0; i--) if (arr[i] != null && arr[i] !== 0) { cur = i; break; }
+  if (cur < 0) return { value: null, period: '' };
+  const out = { value: arr[cur], period: shortP(periods[cur]), periodRaw: periods[cur] };
+  if (tile.pop && tile.pop !== 'none') {
+    const j = priorIndex(periods, cur, tile.pop);
+    if (j >= 0 && arr[j]) out.change = { pct: (arr[cur] - arr[j]) / Math.abs(arr[j]), label: POP_LABEL[tile.pop], prior: arr[j], priorPeriod: shortP(periods[j]) };
+    else out.change = { pct: null, label: POP_LABEL[tile.pop] };
+  }
+  if (cm) { const c = ser.rows[cur][cm]; if (c) out.cmp = { pct: (arr[cur] - c) / Math.abs(c), label: cmpLabel(tile) }; }
+  if (tile.sparkline) out.spark = spark(periods, arr, cur);
+  return out;
+}
+const goodDelta = (pct, m) => (pct >= 0) !== !!m.lower_is_better;
+
+/* ---------- tiles ---------- */
+const mount = fn => S.mounts.push(fn);
+function renderGrid() {
+  const grid = $('#grid'); if (!grid || !S.spec) return;
+  S.mounts = []; const open = S.pop && S.pop.dataset.tile;
+  grid.replaceChildren(...S.spec.tiles.map(tileEl));
+  S.mounts.forEach(f => f());
+  if (open) { const t = $(`[data-tile-id="${open}"]`); if (t && S.pop && !S.pop.isConnected) t.append(S.pop); }
+}
+function tileEl(tile) {
+  const body = h('div', { class: 'chartbox' });
+  const m = tile.type === 'kpi' ? metricOf(tile.metric) : null;
+  const metrics = tile.type === 'kpi' ? [tile.metric] : tile.metrics || [];
+  const head = h('div', { class: 'tile-h' }, h('h3', { text: tile.title, title: tile.title }));
+  if (tile.type !== 'kpi' && tile.type !== 'table' && metrics.length > 1) {
+    head.append(h('select', { 'aria-label': 'Measure', onchange: e => { S.tileMetric[tile.id] = e.target.value; renderGrid(); } },
+      metrics.map(n => h('option', { value: n, text: metricOf(n).label, selected: (S.tileMetric[tile.id] || metrics[0]) === n }))));
+  }
+  const tools = h('div', { class: 'tools' },
+    iconBtn('info', 'About this data', null, b => attachInfo(b, tile)),
+    iconBtn('sparkle', 'Explain this data with Claude', () => openExplain(tile), null, 'ai'),
+    iconBtn('pencil', 'Edit tile', () => openTileEditor(tile)));
+  head.append(tools);
+  const el = h('section', { class: 'tile ' + tile.type, 'data-tile-id': tile.id, style: { gridColumn: `span ${tile.span || 4}` } }, head, body);
+  const need = tileKeys(tile);
+  const err = need.map(k => S.errors[k]).find(Boolean);
+  if (err) { body.append(h('div', { class: 'err' }, h('i'), 'Failed to load', h('button', { class: 'btn ghost', onclick: () => fetchAll(), text: 'Retry' }))); return el; }
+  if (need.some(k => !S.data[k])) { body.append(h('div', { class: 'skeleton' })); return el; }
+  if (tile.type === 'kpi') kpiBody(tile, body, m);
+  else if (tile.type === 'line') mount(() => lineBody(tile, body));
+  else if (tile.type === 'table') tableBody(tile, body);
+  else mount(() => barBody(tile, body));
+  const ign = new Set(), notes = new Set(), active = new Set(S.spec.filters.filter(filterActive).map(f => f.dimension));
+  need.forEach(k => { const d = S.data[k]; if (d) { (d.ignored_filters || []).forEach(x => active.has(x) && ign.add(x)); if (d.note) notes.add(d.note); } });
+  if (ign.size || notes.size) el.append(h('div', { class: 'tile-note' }, ign.size ? 'Not filtered by ' + [...ign].map(x => dimOf(x).label).join(', ') + ': this tile\u2019s data in the snapshot does not include it. ' : '', [...notes].join(' ')));
+  return el;
+}
+/* the query results a tile is drawn from (keys into S.data) */
+function tileKeys(tile) {
+  const key = tile.type === 'kpi' ? ((!S.spec.time || tile.value_mode === 'total') ? 'total:' + tile.id : 'series') : (tile.type === 'line' ? 'series' : 'tile:' + tile.id);
+  return tile.type === 'kpi' && tile.sparkline && S.spec.time && tile.value_mode === 'total' ? ['total:' + tile.id, 'series'] : [key];
+}
+function iconBtn(name, label, onclick, setup, extra) {
+  const b = h('button', { class: 'iconbtn ' + (extra || ''), type: 'button', 'aria-label': label, title: label, onclick }, icon(name));
+  if (setup) setup(b);
+  return b;
+}
+function kpiBody(tile, body, m) {
+  const k = kpiModel(tile); body.classList.remove('chartbox'); body.style.flex = 'none';   // a KPI is not a chart: no minimum chart height
+  if (!k) return;
+  if (k.value == null) { body.append(h('div', { class: 'kpi-sub', text: 'No data for the current filters' })); return; }
+  body.append(h('div', { class: 'kpi-val', text: fmtVal(k.value, m), title: fmtVal(k.value, m, true) }));
+  const sub = h('div', { class: 'kpi-sub' });
+  if (k.period) sub.append(h('span', { text: k.period }));
+  if (k.change) {
+    if (k.change.pct == null) sub.append(h('span', { text: `${k.change.label}: n/a` }));
+    else { const good = goodDelta(k.change.pct, m), flat = Math.abs(k.change.pct) < 0.0005;
+      sub.append(h('span', { class: 'delta ' + (flat ? 'flat' : good ? 'good' : 'bad'), title: `${k.change.priorPeriod}: ${fmtVal(k.change.prior, m, true)}` }, icon(flat ? 'flat' : k.change.pct >= 0 ? 'up' : 'down'), fmtPct(k.change.pct), ' ', k.change.label)); }
+  }
+  if (k.cmp) { const good = goodDelta(k.cmp.pct, m); sub.append(h('span', { class: 'delta ' + (good ? 'good' : 'bad') }, fmtPct(k.cmp.pct), ' ', k.cmp.label)); }
+  body.append(sub);
+  if (k.spark && k.spark.length > 1) body.append(sparkline(k.spark, COLORS()[0]));
+}
+function seriesRows(primary) {
+  const t = S.spec.time, tf = timeFilter();
+  const rows = S.data.series.rows.filter(r => !tf || filterMatches(tf, r[t.dimension]));
+  if (!primary) return rows;
+  let end = rows.length - 1; while (end >= 0 && !rows[end][primary]) end--;   // drop future periods that have plan but no actuals
+  return rows.slice(0, end + 1);
+}
+function lineBody(tile, body) {
+  const t = S.spec.time, ms = tile.metrics, sel = S.tileMetric[tile.id] || ms[0], rows = seriesRows(sel), m = metricOf(sel), cm = cmpMetric(tile);
+  const labels = rows.map(r => shortP(r[t.dimension]));
+  const series = [{ name: m.label, values: rows.map(r => r[sel]), fmt: v => fmtVal(v, m, true), axis: v => fmtVal(v, m) }];
+  if (cm && sel === ms[0]) { const c = metricOf(cm); series.push({ name: c.label, values: rows.map(r => r[cm]), fmt: v => fmtVal(v, c, true), axis: v => fmtVal(v, c), dashed: true }); }
+  lineChart(body, labels, series, COLORS());
+}
+function barBody(tile, body) {
+  const d = S.data['tile:' + tile.id], dim = tile.x, ms = tile.metrics, sel = S.tileMetric[tile.id] || ms[0], m = metricOf(sel);
+  const rows = [...d.rows].filter(r => r[sel] != null).sort((a, b) => (b[sel] || 0) - (a[sel] || 0)).slice(0, tile.limit || 15);
+  barChart(body, rows.map(r => String(r[dim])), rows.map(r => r[sel]), (v, full) => fmtVal(v, m, full), v => fmtVal(v, m), COLORS()[0], tile.type === 'hbar');
+}
+function tableBody(tile, body) {
+  const d = S.data['tile:' + tile.id], dim = tile.groupBy, ms = tile.metrics, st = S.sort[tile.id] || { col: ms[0], dir: -1 };
+  const rows = [...d.rows].sort((a, b) => st.col === dim ? String(a[dim]).localeCompare(String(b[dim])) * st.dir : ((a[st.col] || 0) - (b[st.col] || 0)) * st.dir);   // dir -1 = descending
+  const th = (c, label) => h('th', { text: label + (st.col === c ? (st.dir < 0 ? ' ↓' : ' ↑') : ''), onclick: () => { S.sort[tile.id] = { col: c, dir: st.col === c ? -st.dir : -1 }; renderGrid(); } });
+  body.append(h('div', { class: 'tablewrap' }, h('table', null,
+    h('thead', null, h('tr', null, th(dim, dimOf(dim).label), ms.map(n => th(n, metricOf(n).label)))),
+    h('tbody', null, rows.map(r => h('tr', null, h('td', { text: String(r[dim]) }), ms.map(n => h('td', { text: fmtVal(r[n], metricOf(n), true) }))))))));
+}
+
+/* ---------- popovers ---------- */
+function closePop() { if (S.pop) { S.pop.remove(); S.pop = null; S.popAnchor = null; } }
+function openPop(el, host, anchorEl) { closePop(); S.pop = el; S.popAnchor = anchorEl; host.append(el); return el; }
+document.addEventListener('mousedown', e => { if (S.pop && !S.pop.contains(e.target) && !(S.popAnchor && S.popAnchor.contains(e.target))) closePop(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePop(); closeModal(); } });
+
+function describeFilters() { return S.spec.filters.filter(filterActive).map(f => `${dimOf(f.dimension).label}: ${filterText(f)}`); }
+function infoContent(tile) {
+  const defs = S.spec.definitions || { metrics: {}, dimensions: {} };
+  const ms = tile.type === 'kpi' ? [tile.metric] : [...(tile.metrics || [])]; if (cmpMetric(tile)) ms.push(cmpMetric(tile));
+  const ds = [tile.x, tile.groupBy, timeDim()].filter(Boolean);
+  const root = h('div', null, h('h4', { text: tile.title }),
+    h('div', { class: 'row' }, h('div', { class: 'k', text: 'Source' }), h('span', { class: 'src', text: S.spec.view }),
+      S.spec.view_comment ? h('div', { class: 'def muted', text: S.spec.view_comment }) : null));
+  const defBlock = (n, d, fallback) => h('div', { class: 'row' }, h('b', { text: (d && d.label) || fallback }), ' ', h('span', { class: 'muted', text: n }),
+    d && d.description ? h('div', { class: 'def', text: d.description }) : null,
+    d && d.formula ? h('div', { class: 'def muted', text: 'Formula: ' + d.formula }) : null,
+    d && d.additive === false ? h('div', { class: 'def muted', text: 'Not additive: recomputed for each grouping.' }) : null,
+    d && d.ontology ? h('div', { class: 'onto' }, h('div', { class: 'k', text: 'Business glossary' + (d.ontology.source ? ' · ' + d.ontology.source : '') }),
+      h('b', { text: d.ontology.concept || '' }), h('div', { text: d.ontology.definition || '' }),
+      d.ontology.formula ? h('div', { class: 'muted', text: 'Formula: ' + d.ontology.formula }) : null,
+      d.ontology.bound_to ? h('div', { class: 'muted', text: 'Bound to: ' + d.ontology.bound_to }) : null) : null);
+  [...new Set(ms)].forEach(n => root.append(defBlock(n, defs.metrics[n], metricOf(n).label)));
+  [...new Set(ds)].forEach(n => root.append(defBlock(n, defs.dimensions[n], dimOf(n).label)));
+  const f = describeFilters();
+  root.append(h('div', { class: 'row' }, h('div', { class: 'k', text: 'Filters applied' }), h('div', { text: f.length ? f.join(' · ') : 'None (all data)' })));
+  const sqls = [...new Set(tileKeys(tile).map(k => S.data[k] && S.data[k].sql).filter(Boolean))];
+  if (sqls.length) root.append(h('div', { class: 'row' }, h('div', { class: 'k', text: 'How this data was fetched (governed query)' }), ...sqls.map(q => h('pre', { class: 'sqlbox', text: q }))));
+  if (tile.type === 'kpi' && S.spec.time) root.append(h('div', { class: 'row muted', text: tile.value_mode === 'total' ? 'Total over the selected period range.' : `Latest period with data${tile.pop && tile.pop !== 'none' ? `, change vs ${tile.pop} comparison period` : ''}.` }));
+  return root;
+}
+function attachInfo(btn, tile) {
+  let pinned = false, tOpen = null, tClose = null;
+  const host = () => $(`[data-tile-id="${tile.id}"]`) || btn.closest('.tile');   // look the tile up fresh: the grid may have re-rendered
+  const show = () => { clearTimeout(tClose); if (S.pop && S.pop.dataset.info === tile.id) return;
+    const p = h('div', { class: 'pop', role: 'tooltip', 'data-info': tile.id, 'data-tile': tile.id, style: { top: '34px', right: '8px' } }, infoContent(tile));
+    p.addEventListener('mouseenter', () => clearTimeout(tClose)); p.addEventListener('mouseleave', () => { if (!pinned) tClose = setTimeout(closePop, 180); });
+    openPop(p, host(), btn); };
+  btn.addEventListener('mouseenter', () => { clearTimeout(tClose); tOpen = setTimeout(show, 120); });
+  btn.addEventListener('mouseleave', () => { clearTimeout(tOpen); if (!pinned) tClose = setTimeout(closePop, 180); });
+  btn.addEventListener('focus', show); btn.addEventListener('blur', () => { if (!pinned) tClose = setTimeout(closePop, 180); });
+  btn.addEventListener('click', () => { pinned = !pinned; if (pinned) show(); else closePop(); });
+}
+
+/* ---------- Explain with AI ---------- */
+function dimsForPrompt() { return S.spec.catalog.dimensions.filter(d => d.type !== 'time').slice(0, 3).map(d => d.label || d.name); }
+function explainDefault(tile) {
+  const dims = dimsForPrompt().join(', ') || 'the available dimensions';
+  if (tile.type === 'kpi') {
+    const k = kpiModel(tile), m = metricOf(tile.metric);
+    if (k && k.value != null) {
+      const ch = k.change && k.change.pct != null ? `, ${fmtPct(k.change.pct)} ${k.change.label}` : '';
+      return `Explain ${m.label}: ${fmtVal(k.value, m, true)}${k.period ? ' in ' + k.period : ''}${ch}. What is driving it? Break it down by ${dims} and call out the biggest contributors and anything unusual.`;
+    }
+    return `Explain ${m.label} for the current filters. What is driving it, broken down by ${dims}?`;
+  }
+  if (tile.type === 'line') return `Explain the trend in "${tile.title}". Identify turning points, seasonality and outliers, and what is likely driving them across ${dims}.`;
+  if (tile.type === 'table') return `Explain what stands out in "${tile.title}". Which ${dimOf(tile.groupBy).label} values are over- or under-performing, and why?`;
+  return `Explain the differences shown in "${tile.title}". What explains the leaders and laggards, and is the distribution unusual?`;
+}
+function explainData(tile) {
+  const lines = [];
+  if (tile.type === 'kpi') { const k = kpiModel(tile), m = metricOf(tile.metric); if (k && k.value != null) lines.push(`${m.label}: ${fmtVal(k.value, m, true)} (${k.period || 'range'})`, k.change && k.change.pct != null ? `${k.change.label} change: ${fmtPct(k.change.pct)} vs ${k.change.priorPeriod} (${fmtVal(k.change.prior, m, true)})` : '', k.cmp ? `${k.cmp.label}: ${fmtPct(k.cmp.pct)}` : ''); }
+  else if (tile.type === 'line' && S.data.series) { const rows = seriesRows(tile.metrics[0]).slice(-12), m = metricOf(tile.metrics[0]); lines.push(`Last ${rows.length} periods of ${m.label}:`, ...rows.map(r => `  ${r[timeDim()]}: ${fmtVal(r[m.name], m, true)}`)); }
+  else if (S.data['tile:' + tile.id]) { const d = S.data['tile:' + tile.id], dim = tile.type === 'table' ? tile.groupBy : tile.x; lines.push(`Top rows by ${metricOf(tile.metrics[0]).label}:`, ...d.rows.slice(0, 10).map(r => `  ${r[dim]}: ` + tile.metrics.map(n => `${metricOf(n).label} ${fmtVal(r[n], metricOf(n), true)}`).join(', '))); }
+  return lines.filter(Boolean).join('\n');
+}
+function explainMessage(tile, question, withContext) {
+  if (!withContext) return question;
+  const ms = tile.type === 'kpi' ? [tile.metric] : tile.metrics || [];
+  const tf = timeFilter();
+  return [question, '', '---', 'Dashboard context (use the Snowflake semantic view tools for deeper analysis; metric and dimension names below are exact):',
+    `- Dashboard: ${S.spec.title} (${S.spec.id}), tile "${tile.title}" (${tile.id})`, `- Semantic view: ${S.spec.view}`,
+    `- Metrics: ${[...ms, cmpMetric(tile)].filter(Boolean).join(', ')}`, tile.x || tile.groupBy ? `- Grouped by: ${tile.x || tile.groupBy}` : '',
+    `- Time dimension: ${timeDim() || 'none'}${tf && filterActive(tf) ? ' (' + filterText(tf) + ')' : ''}`,
+    `- Active filters: ${JSON.stringify(S.spec.filters.filter(filterActive))}`, '- Data shown:', explainData(tile)].filter(x => x !== '').join('\n');
+}
+function openExplain(tile) {
+  const ta = h('textarea', { 'aria-label': 'Question for Claude' }); ta.value = explainDefault(tile);
+  const ctx = h('input', { type: 'checkbox', checked: true, id: 'ctxchk' });
+  const status = h('div', { class: 'muted', style: { marginTop: '6px' } });
+  const send = h('button', { class: 'btn primary', type: 'button', onclick: async () => {
+    const text = explainMessage(tile, ta.value.trim() || explainDefault(tile), ctx.checked);
+    send.disabled = true; status.textContent = 'Sending…';
+    try {
+      const how = await T.send(text);
+      if (how === 'sent') { status.textContent = 'Sent. Claude will answer in the conversation.'; setTimeout(closeModal, 900); }
+      else { send.disabled = false; status.textContent = 'Copied to your clipboard. Paste it into your chat with Claude.'; }
+    } catch (e) {
+      send.disabled = false; status.textContent = 'Could not send or copy automatically (' + e.message + '). Select the question above and copy it.'; ta.value = text; ta.select();
+    }
+  } }, icon('sparkle'), 'Ask Claude');
+  showModal(h('div', null, h('h2', { text: 'Explain this data' }), h('div', { class: 'muted', text: tile.title }),
+    h('div', { class: 'field' }, h('label', { text: 'Question (edit before sending)' }), ta),
+    h('label', { class: 'opt', style: { display: 'flex', gap: '6px', alignItems: 'center' } }, ctx, 'Include dashboard context and the numbers shown'),
+    status, h('div', { class: 'btns' }, h('span'), h('div', { class: 'inline' }, h('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: closeModal }), send))));
+  setTimeout(() => ta.focus(), 0);
+}
+
+/* ---------- modal + toast ---------- */
+let overlay = null;
+function showModal(content) { closeModal(); overlay = h('div', { class: 'overlay', onmousedown: e => { if (e.target === overlay) closeModal(); } }, h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' }, content)); document.body.append(overlay); }
+function closeModal() { if (overlay) { overlay.remove(); overlay = null; } }
+function toast(msg) { clearTimeout(S.toastT); $('.toast') && $('.toast').remove(); document.body.append(h('div', { class: 'toast', role: 'status', text: msg })); S.toastT = setTimeout(() => $('.toast') && $('.toast').remove(), 3500); }
+
+/* ---------- filters ---------- */
+function renderFilters() {
+  const bar = $('#filters'); if (!bar) return; closePop();
+  bar.replaceChildren(h('span', { class: 'lab' }, icon('filter')));
+  S.spec.filters.forEach(f => {
+    const d = dimOf(f.dimension), on = filterActive(f);
+    const main = h('button', { class: 'main', type: 'button', onclick: () => openFilterEditor(f.dimension, chip) }, h('b', { text: d.label }), h('span', { text: filterText(f) }), icon('chev'));
+    const chip = h('span', { class: 'chip' + (on ? ' on' : ''), 'data-dim': f.dimension }, main,
+      h('button', { class: 'rm', type: 'button', 'aria-label': 'Remove filter ' + d.label, title: 'Remove filter', onclick: () => persist([{ op: 'remove_filter', dimension: f.dimension }]).then(fetchAll) }, icon('x')));
+    bar.append(chip);
+  });
+  const used = new Set(S.spec.filters.map(f => f.dimension)), avail = S.spec.catalog.dimensions.filter(d => !used.has(d.name));
+  if (avail.length) {
+    const add = h('button', { class: 'btn ghost', type: 'button', onclick: () => {
+      const list = h('div', { class: 'pop', style: { top: (add.offsetTop + add.offsetHeight + 4) + 'px', left: add.offsetLeft + 'px' } }, h('h4', { text: 'Add filter' }),
+        h('div', { class: 'list' }, avail.map(d => h('label', { class: 'opt', style: { cursor: 'pointer' }, onclick: () => { closePop(); openFilterEditor(d.name, null, true); } }, d.label || d.name, d.type === 'time' ? h('small', { class: 'muted', text: ' time' }) : null))));
+      openPop(list, bar, add); } }, icon('plus'), 'Add filter');
+    bar.append(add);
+  }
+}
+async function openFilterEditor(dim, chip, isNew) {
+  const d = dimOf(dim), cur = S.spec.filters.find(f => f.dimension === dim) || { dimension: dim, op: 'in', values: [] };
+  const bar = $('#filters'), anchor = chip || bar.lastElementChild;
+  const pop = h('div', { class: 'pop', style: { top: (anchor.offsetTop + anchor.offsetHeight + 4) + 'px', left: Math.max(0, Math.min(anchor.offsetLeft, bar.clientWidth - 330)) + 'px', minWidth: '300px' } });
+  openPop(pop, bar, anchor);
+  pop.append(h('h4', { text: d.label }), h('div', { class: 'muted', text: 'Loading values…' }));
+  const apply = f => { closePop(); persist([{ op: 'set_filter', filter: f }]).then(fetchAll); };
+  let info; try { info = await call('dimension_values', { view: view(), dimension: dim, limit: d.type === 'time' ? 1000 : 51 }); } catch (e) { pop.replaceChildren(h('h4', { text: d.label }), h('div', { class: 'err', text: 'Could not load values: ' + e.message })); return; }
+  if (S.pop !== pop) return;
+  const actions = (extra, onApply) => h('div', { class: 'btns' }, h('button', { class: 'btn ghost', type: 'button', text: 'Clear', onclick: () => apply(d.type === 'time' ? { dimension: dim, op: 'between', values: [null, null] } : { dimension: dim, op: 'in', values: [] }) }), extra || h('span'),
+    h('button', { class: 'btn primary', type: 'button', text: 'Apply', onclick: onApply }));
+  if (d.type === 'time') {
+    const vals = info.values, mk = (v) => h('select', null, h('option', { value: '', text: 'Open' }), vals.map(x => h('option', { value: x, text: x, selected: x === v })));
+    const from = mk(cur.values && cur.values[0]), to = mk(cur.values && cur.values[1]);
+    const preset = (label, f, t) => h('button', { class: 'btn', type: 'button', text: label, onclick: () => apply({ dimension: dim, op: 'between', values: [f, t] }) });
+    const nonzero = vals; const last = nonzero[nonzero.length - 1], yr = last ? String(last).match(/\d{4}/) : null;
+    pop.replaceChildren(h('h4', { text: d.label + ' range' }), h('div', { class: 'row' }, h('div', { class: 'k', text: 'From' }), from), h('div', { class: 'row' }, h('div', { class: 'k', text: 'To' }), to),
+      h('div', { class: 'inline', style: { flexWrap: 'wrap' } }, preset('All', null, null), preset('Last 12', nonzero[Math.max(0, nonzero.length - 12)] || null, null), yr ? preset('Latest year', nonzero.find(v => String(v).includes(yr[0])) || null, null) : null),
+      actions(null, () => apply({ dimension: dim, op: 'between', values: [from.value || null, to.value || null] })));
+    return;
+  }
+  const short = info.total <= 12 && (cur.op === 'in' || !filterActive(cur));
+  const renderFormula = () => {
+    const op = h('select', { 'aria-label': 'Operator' }, ['contains', 'eq', 'ne', 'starts_with', 'in', 'not_in', 'gt', 'gte', 'lt', 'lte', 'between'].map(o => h('option', { value: o, text: OP_LABEL[o] || o, selected: (cur.op === o) })));
+    const dl = h('datalist', { id: 'dl_' + dim });
+    const v1 = h('input', { type: 'text', list: 'dl_' + dim, placeholder: 'Value', 'aria-label': 'Value', value: cur.op !== 'in' && cur.op !== 'not_in' ? (cur.values[0] ?? '') : (cur.values || []).join(', ') });
+    const v2 = h('input', { type: 'text', placeholder: 'and', style: { display: 'none' }, value: cur.op === 'between' ? (cur.values[1] ?? '') : '' });
+    const note = h('div', { class: 'muted', style: { marginTop: '4px' } });
+    const sync = () => { v2.style.display = op.value === 'between' ? '' : 'none'; v1.placeholder = (op.value === 'in' || op.value === 'not_in') ? 'a, b, c' : 'Value'; };
+    let tm; const suggest = () => { clearTimeout(tm); tm = setTimeout(async () => { const q = v1.value.split(',').pop().trim(); if (!q) { dl.replaceChildren(); note.textContent = `${info.total} values`; return; }
+      try { const r = await call('dimension_values', { view: view(), dimension: dim, search: q, limit: 8 }); dl.replaceChildren(...r.values.map(x => h('option', { value: x }))); note.textContent = (op.value === 'contains') ? `${r.total} matching values` : ''; } catch (_) {} }, 250); };
+    op.addEventListener('change', sync); v1.addEventListener('input', suggest); sync(); note.textContent = `${info.total}${info.total > 50 ? '+' : ''} values`;
+    pop.replaceChildren(h('h4', { text: d.label + ' (' + info.total + ' values)' }), h('div', { class: 'row' }, op), h('div', { class: 'row' }, v1, dl), h('div', { class: 'row' }, v2), note,
+      actions(short ? h('button', { class: 'btn ghost', type: 'button', text: 'Pick values', onclick: renderPick }) : null, () => {
+        const o = op.value, raw = v1.value.trim(); if (!raw) return apply({ dimension: dim, op: 'in', values: [] });
+        const values = (o === 'in' || o === 'not_in') ? raw.split(',').map(x => x.trim()).filter(Boolean) : o === 'between' ? [raw, v2.value.trim() || null] : [raw];
+        apply({ dimension: dim, op: o, values }); }));
+  };
+  const renderPick = () => {
+    const sel = new Set((cur.op === 'in' ? cur.values : []).map(String)), boxes = [];
+    const list = h('div', { class: 'list' }, info.values.map(v => { const c = h('input', { type: 'checkbox', checked: sel.has(String(v)), value: String(v) }); boxes.push(c); return h('label', { class: 'opt' }, c, String(v)); }));
+    pop.replaceChildren(h('h4', { text: d.label }), h('div', { class: 'inline' }, h('button', { class: 'btn ghost', type: 'button', text: 'All', onclick: () => boxes.forEach(b => b.checked = false) }), h('span', { class: 'muted', text: 'Nothing checked means all values' })), list,
+      actions(h('button', { class: 'btn ghost', type: 'button', text: 'Use a formula', onclick: renderFormula }), () => apply({ dimension: dim, op: 'in', values: boxes.filter(b => b.checked).map(b => b.value) })));
+  };
+  short || (isNew && info.total <= 12) ? renderPick() : renderFormula();
+}
+
+/* ---------- tile editor ---------- */
+function openTileEditor(existing) {
+  const cat = S.spec.catalog, t = existing ? JSON.parse(JSON.stringify(existing)) : { type: 'kpi', title: '', metric: cat.metrics[0].name, span: 3, pop: S.spec.time ? 'MoM' : 'none', sparkline: !!S.spec.time, value_mode: S.spec.time ? 'latest' : 'total' };
+  const f = {};
+  const sel = (opts, v) => h('select', null, opts.map(([val, label]) => h('option', { value: val, text: label, selected: val === v })));
+  f.title = h('input', { type: 'text', value: t.title || '', placeholder: 'Tile title' });
+  f.type = sel([['kpi', 'KPI'], ['line', 'Line chart'], ['bar', 'Bar chart'], ['hbar', 'Horizontal bars'], ['table', 'Table']], t.type);
+  const chosen = new Set(t.type === 'kpi' ? [t.metric] : t.metrics || []);
+  const search = h('input', { type: 'text', placeholder: 'Search metrics', 'aria-label': 'Search metrics' });
+  const pick = h('div', { class: 'metricpick' });
+  const drawPick = () => { const kpi = f.type.value === 'kpi', q = search.value.toLowerCase();
+    pick.replaceChildren(...cat.metrics.filter(m => !q || (m.label + m.name).toLowerCase().includes(q)).map(m => {
+      const c = h('input', { type: kpi ? 'radio' : 'checkbox', name: 'mp', checked: chosen.has(m.name), value: m.name, onchange: e => { if (kpi) { chosen.clear(); chosen.add(m.name); } else e.target.checked ? chosen.add(m.name) : chosen.delete(m.name); } });
+      return h('label', { title: m.description || '' }, c, m.label, ' ', h('small', { text: m.name })); })); };
+  search.addEventListener('input', drawPick);
+  const dimOpts = [['', '—'], ...cat.dimensions.map(d => [d.name, d.label || d.name])];
+  f.dim = sel(dimOpts, t.x || t.groupBy || (S.spec.time && t.type === 'line' ? timeDim() : ''));
+  f.compare = sel([['', 'None'], ...cat.metrics.map(m => [m.name, m.label])], cmpMetric(t) || '');
+  f.pop = sel(Object.entries(POP_LABEL), t.pop || 'none');
+  f.spark = h('input', { type: 'checkbox', checked: !!t.sparkline });
+  f.mode = sel([['latest', 'Latest period'], ['total', 'Total over selected range']], t.value_mode || 'latest');
+  f.limit = h('input', { type: 'text', value: String(t.limit || 15) });
+  f.span = sel([['3', 'Quarter width'], ['4', 'One third'], ['6', 'Half'], ['8', 'Two thirds'], ['12', 'Full width']], String(t.span || 4));
+  const kpiOnly = h('div', null, h('div', { class: 'field' }, h('label', { text: 'Period-over-period change' }), f.pop), h('div', { class: 'field' }, h('label', { text: 'Value shows' }), f.mode),
+    h('label', { class: 'opt', style: { display: 'flex', gap: '6px', alignItems: 'center' } }, f.spark, 'Show sparkline'));
+  const dimField = h('div', { class: 'field' }, h('label', { id: 'dimlab', text: 'Dimension' }), f.dim), limitField = h('div', { class: 'field' }, h('label', { text: 'Max rows / bars' }), f.limit);
+  const cmpField = h('div', { class: 'field' }, h('label', { text: 'Compare to (dashed line / variance)' }), f.compare);
+  const sync = () => { const ty = f.type.value; kpiOnly.style.display = ty === 'kpi' ? '' : 'none'; dimField.style.display = ty === 'kpi' ? 'none' : ''; limitField.style.display = (ty === 'bar' || ty === 'hbar' || ty === 'table') ? '' : 'none'; cmpField.style.display = (ty === 'kpi' || ty === 'line') ? '' : 'none';
+    $('#dimlab', dimField).textContent = ty === 'table' ? 'Group rows by' : ty === 'line' ? 'X axis (time)' : 'Category'; if (ty === 'kpi' && chosen.size > 1) { const first = [...chosen][0]; chosen.clear(); chosen.add(first); } drawPick(); };
+  f.type.addEventListener('change', () => { if (f.type.value === 'line' && S.spec.time) f.dim.value = timeDim(); sync(); });
+  const err = h('div', { class: 'muted', style: { color: 'var(--bad)' } });
+  const build = () => { const ty = f.type.value, ms = [...chosen]; if (!ms.length) return { error: 'Pick at least one metric.' };
+    const out = { type: ty, title: f.title.value.trim() || (metricOf(ms[0]).label), span: +f.span.value };
+    if (ty === 'kpi') Object.assign(out, { metric: ms[0], pop: f.pop.value, sparkline: f.spark.checked, value_mode: f.mode.value });
+    else { out.metrics = ms; if (!f.dim.value) return { error: 'Pick a dimension.' }; if (ty === 'table') out.groupBy = f.dim.value; else out.x = f.dim.value; if (ty !== 'line') out.limit = Math.max(1, +f.limit.value || 15); }
+    if ((ty === 'kpi' || ty === 'line') && f.compare.value) out.compare = ty === 'kpi' ? { metric: f.compare.value, label: 'vs ' + metricOf(f.compare.value).label.toLowerCase() } : f.compare.value;
+    return { tile: out }; };
+  const save = h('button', { class: 'btn primary', type: 'button', text: existing ? 'Save' : 'Add tile', onclick: () => {
+    const r = build(); if (r.error) { err.textContent = r.error; return; }
+    const ops = existing ? [{ op: 'update_tile', id: existing.id, changes: { ...Object.fromEntries(Object.keys(existing).filter(k => k !== 'id' && !(k in r.tile)).map(k => [k, null])), ...r.tile } }] : [{ op: 'add_tile', tile: r.tile }];
+    closeModal(); persist(ops).then(fetchAll); } });
+  const left = existing ? h('div', { class: 'inline' }, h('button', { class: 'btn', type: 'button', text: 'Delete', onclick: () => { closeModal(); persist([{ op: 'remove_tile', id: existing.id }]).then(fetchAll); } }),
+    h('button', { class: 'btn', type: 'button', title: 'Move earlier', text: '←', onclick: () => { const i = S.spec.tiles.findIndex(x => x.id === existing.id); closeModal(); persist([{ op: 'move_tile', id: existing.id, index: Math.max(0, i - 1) }]); } }),
+    h('button', { class: 'btn', type: 'button', title: 'Move later', text: '→', onclick: () => { const i = S.spec.tiles.findIndex(x => x.id === existing.id); closeModal(); persist([{ op: 'move_tile', id: existing.id, index: i + 1 }]); } })) : h('span');
+  showModal(h('div', null, h('h2', { text: existing ? 'Edit tile' : 'Add tile' }), h('div', { class: 'field' }, h('label', { text: 'Title' }), f.title), h('div', { class: 'field' }, h('label', { text: 'Type' }), f.type),
+    h('div', { class: 'field' }, h('label', { text: 'Metric(s)' }), search, pick), dimField, cmpField, kpiOnly, limitField, h('div', { class: 'field' }, h('label', { text: 'Width' }), f.span), err,
+    h('div', { class: 'btns' }, left, h('div', { class: 'inline' }, h('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: closeModal }), save))));
+  sync();
+}
+
+/* ---------- shell ---------- */
+function renderShell() {
+  const root = $('#root'); root.replaceChildren();
+  const title = h('h1', { class: 'title', tabindex: '0', title: 'Click to rename', text: S.spec.title,
+    onclick: () => { title.contentEditable = 'true'; title.focus(); },
+    onblur: () => { title.contentEditable = 'false'; const v = title.textContent.trim(); if (v && v !== S.spec.title) persist([{ op: 'set_title', title: v }]); else title.textContent = S.spec.title; },
+    onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); title.blur(); } if (e.key === 'Escape') { title.textContent = S.spec.title; title.blur(); } } });
+  const snap = T.kind === 'snapshot';
+  const day = snap && T.info.built_at ? String(T.info.built_at).slice(0, 10) : '';
+  const reset = snap ? h('button', { class: 'btn', id: 'resetbtn', type: 'button', style: { display: T.edited ? '' : 'none' }, title: 'Discard your edits and go back to the original snapshot',
+    onclick: () => { setSpec(T.reset(), true); toast('Back to the original snapshot'); } }, 'Reset edits') : null;
+  root.append(h('div', { class: 'app' },
+    h('div', { class: 'top' }, h('div', null, title, h('div', { class: 'subtitle' }, S.spec.view, snap ? h('span', { class: 'badge', title: 'This file holds a copy of the data. It does not refresh.' }, 'Snapshot' + (day ? ' · ' + day : '')) : null)),
+      h('div', { class: 'actions' }, reset, h('button', { class: 'btn', type: 'button', onclick: () => openTileEditor(null) }, icon('plus'), 'Add tile'),
+        snap ? null : h('button', { class: 'btn', type: 'button', title: 'Refresh data', 'aria-label': 'Refresh data', onclick: () => fetchAll() }, icon('refresh')))),
+    h('div', { class: 'filters', id: 'filters' }), h('div', { class: 'grid', id: 'grid' }),
+    snap ? h('div', { class: 'foot' }, 'This is a snapshot' + (day ? ' built on ' + day : '') + (T.info.exported_by ? ' for ' + T.info.exported_by : '') + '. It contains the data shown and does not refresh; anyone who has this file can see that data. Ask Claude to rebuild it for newer numbers or a different cut. Filters and tile edits here work on the embedded data' + ' and are kept in this browser only.') : null));
+  renderFilters();
+}
+function setSpec(spec, fresh) {
+  const prev = S.spec; S.spec = spec;
+  { const rb = $('#resetbtn'); if (rb) rb.style.display = T.edited ? '' : 'none'; }
+  if (!prev || fresh || prev.id !== spec.id) renderShell(); else { const t = $('.title'); if (t && document.activeElement !== t) t.textContent = spec.title; renderFilters(); }
+  fetchAll();
+}
+function applyHostContext(c) { if (c && c.theme) document.documentElement.dataset.theme = c.theme; }
+
+/* ---------- model context ---------- */
+function scheduleContext() {
+  clearTimeout(S.ctxT);
+  S.ctxT = setTimeout(() => {
+    if (!S.spec) return;
+    const sp = S.spec, text = `Open dashboard "${sp.title}" (${sp.id}, v${sp.version}) on ${sp.view}. Tiles: ` + sp.tiles.map(t => `${t.id} ${t.type} "${t.title}"`).join('; ') + `. Active filters: ${describeFilters().join('; ') || 'none'}. To change it call update_dashboard.`;
+    T.context(text, { dashboard_id: sp.id, version: sp.version, filters: sp.filters, tiles: sp.tiles.map(t => ({ id: t.id, type: t.type, title: t.title })) });
+  }, 800);
+}
+
+/* ---------- boot ---------- */
+let lastGridWidth = 0, resizeT = null;
+function watchWidth() {
+  if (typeof ResizeObserver === 'undefined') return;
+  new ResizeObserver(() => {
+    const g = $('#grid'); if (!g || !S.spec) return;
+    const w = Math.round(g.clientWidth);
+    if (!lastGridWidth) { lastGridWidth = w; return; }
+    if (Math.abs(w - lastGridWidth) < 12) return;           // ignore sub-pixel and scrollbar jitter
+    lastGridWidth = w; clearTimeout(resizeT);
+    resizeT = setTimeout(() => { if (!overlay && !S.pop) renderGrid(); }, 150);
+  }).observe(document.documentElement);
+}
+async function boot() {
+  watchWidth();
+  await T.boot({ onSpec: spec => setSpec(spec, true), onTheme: applyHostContext });
+  if (T.poll) setInterval(async () => { if (!S.spec || S.busy || document.hidden || overlay) return;
+    try { const r = await call('get_dashboard', { dashboard_id: S.spec.id, since_version: S.spec.version }); if (r.changed && r.spec) { setSpec(r.spec); toast('Dashboard updated'); } } catch (_) {} }, window.__POLL_MS || 5000);
+}
+window.__explorer = { S, boot };
+boot();
+</script></body></html>
