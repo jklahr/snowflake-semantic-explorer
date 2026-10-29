@@ -47,7 +47,7 @@ The ontology says what a concept means and where its data lives. A semantic view
 3. **Search only the chosen domain.** If a result comes from another domain, discard it and say so. When a name exists in more than one domain, pass the domain so the right one resolves.
 4. **Read the concept.**
    - `description` is the governed definition; `formula` appears for metrics and states the grain (`... GROUP BY fiscal period, customer, product`); `synonyms` help matching.
-   - `assets` say where the data lives. **Prefer an asset whose `objectType` is `Semantic View`.** `fqn` is the view, `subObjectName` is the **metric name in that view**, `entityQualifier` is its logical table. Use a table, view or column only when no semantic view is bound, and say why.
+   - `assets` say where the data lives. Use the asset that has an `fqn`; an asset with only a role and null `fqn` is an incomplete duplicate. **Prefer an asset whose `objectType` is `Semantic View`.** `fqn` is the view. `subObjectName` with `subObjectType` `METRIC` is the metric in that view. With `subObjectType` `ENTITY`, it is the semantic-view entity, not a metric. `entityQualifier` is its logical table when present. Use a table, view or column only when no semantic view is bound, and say why.
    - `relationships` has `edges` and `nodes`. **Edges refer to terms by id** (`sourceTermId`, `targetTermId`); resolve the names through `relationships.nodes`. `truncated: true` means there are more edges than were returned.
 5. **Read edges like this.** An edge is "source *type* target". `direction` is relative to the concept you asked about (`UPSTREAM` = it points at you, `DOWNSTREAM` = you point at it).
 
