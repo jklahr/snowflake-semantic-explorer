@@ -52,4 +52,3 @@ Claude queries the view, writes the results and a small JSON spec into files, an
 - A dashboard is a **snapshot**: it shows the data as of the build and does not refresh. Ask Claude to rebuild for fresh numbers. The file contains the data, so share it like the data.
 - Claude writes each row out, so about 500 rows is comfortable (50,000 is the hard limit). Tiles whose data lacks a filtered field say so.
 - Edits made in the page are kept in that browser only.
-- A live, refreshing dashboard is available as the separate add-on `snowflake-semantic-explorer-dashboards`, which an administrator sets up.

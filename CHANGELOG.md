@@ -8,3 +8,4 @@
 - Draw the decomposition before the prose, label mix separately from rate, and do not exaggerate a change by truncating an axis.
 - Let a snapshot answer inside the page when it is published with the viewer's connector. Saved files and the live dashboard keep the chat route. A line chart zooms only when every value is positive and the range is under half the maximum.
 - Validate that every dashboard metric names its semantic view, and make the snapshot preview honor the default end date.
+- Remove the optional live-dashboard add-on from the marketplace. Snapshot dashboards remain in the core plugin.

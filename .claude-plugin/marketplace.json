@@ -9,11 +9,6 @@
       "source": "./plugins/snowflake-semantic-explorer",
       "description": "Core: explore, analyze, snapshot dashboards and deep dives on Snowflake semantic views. No hosting required.",
       "version": "0.4.0"
-    },
-    {
-      "name": "snowflake-semantic-explorer-dashboards",
-      "source": "./plugins/snowflake-semantic-explorer-dashboards",
-      "description": "Optional add-on: live interactive dashboards (render_dashboard MCP App). Requires a deployed dashboard server."
     }
   ]
 }

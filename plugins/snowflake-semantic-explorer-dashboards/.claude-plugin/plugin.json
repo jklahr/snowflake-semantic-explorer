@@ -1,7 +1,0 @@
-{
-  "name": "snowflake-semantic-explorer-dashboards",
-  "version": "0.2.0",
-  "description": "Optional add-on: connects the live interactive dashboard server (render_dashboard). Install only after your admin has deployed it.",
-  "author": { "name": "Your Team" },
-  "keywords": ["snowflake", "dashboard", "mcp-app"]
-}
