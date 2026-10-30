@@ -97,6 +97,7 @@ tbody tr:hover{background:var(--soft)}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.72rem;color:var(--muted);margin:0 0 4px}
 .legend i{display:inline-block;width:16px;vertical-align:middle;margin-right:5px;border-radius:2px}
 
+.ask-out{margin-top:12px;font-size:13px;line-height:1.5}.ask-out p{margin:0 0 8px}.ask-out ul{margin:0 0 8px;padding-left:18px}.ask-out table{border-collapse:collapse;margin:4px 0 10px;width:100%}.ask-out th,.ask-out td{border-bottom:1px solid var(--line);padding:3px 8px;text-align:left;vertical-align:top}.ask-out th{font-weight:600;color:var(--muted)}.ask-out .cap{color:var(--muted);font-size:12px;margin-bottom:6px}.ask-out .bad{color:var(--bad)}.ask-out details{margin-top:6px}.ask-out summary{cursor:pointer;color:var(--muted)}
 .sqlbox{white-space:pre-wrap;word-break:break-all;font:11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--soft);border-radius:6px;padding:6px 8px;max-height:110px;overflow:auto;margin:4px 0 0}
 
 .pop[data-info]{max-height:min(70vh,520px);overflow:auto}
@@ -232,7 +233,8 @@ function lineChart(box, labels, series, colors) {
   const s = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Line chart' });
   box.replaceChildren(...(series.length > 1 ? [h('div', { class: 'legend' }, series.map((sr, k) => h('span', null, h('i', { style: { background: sr.dashed ? 'transparent' : colors[k % colors.length], borderTop: sr.dashed ? '2px dashed ' + colors[k % colors.length] : 'none', height: sr.dashed ? '0' : '3px' } }), sr.name)))] : []), s);
   if (!all.length || labels.length < 1) { box.append(h('div', { class: 'err', text: 'No data' })); return; }
-  const ticks = niceTicks(Math.max(...all), Math.min(0, ...all)), lo = ticks[0], hi = ticks[ticks.length - 1];
+  const mx = Math.max(...all), mn = Math.min(...all), zoom = mn > 0 && (mx - mn) < 0.5 * mx, pad = (mx - mn) || 1;
+  const ticks = zoom ? niceTicks(mx + pad * 0.1, Math.max(0, mn - pad * 0.2)) : niceTicks(mx, Math.min(0, mn)), lo = ticks[0], hi = ticks[ticks.length - 1];
   const tmp = svg('text', { class: 'axis' }); s.append(tmp);
   let lw = 0; ticks.forEach(t => { tmp.textContent = series[0].axis(t); lw = Math.max(lw, tlen(tmp, tmp.textContent)); }); tmp.remove();
   m.l = Math.ceil(lw) + 12;
@@ -756,25 +758,119 @@ function explainMessage(tile, question, withContext) {
     `- Time dimension: ${timeDim() || 'none'}${tf && filterActive(tf) ? ' (' + filterText(tf) + ')' : ''}`,
     `- Active filters: ${JSON.stringify(S.spec.filters.filter(filterActive))}`, '- Data shown:', explainData(tile)].filter(x => x !== '').join('\n');
 }
+/* ---------- Inline ask: answer inside the page through the viewer's Snowflake connector ---------- */
+/* Needs a published page with capabilities {mcp: {servers: [{server: spec.ask.connector, tools: [spec.ask.tool]}]}}.
+   Anywhere else (a saved file, a viewer without the connector) this is invisible and the chat/clipboard route is used. */
+const INLINE = { mcp: undefined };
+const inlineConfigured = () => !!(S.spec.ask && S.spec.ask.connector && window.claude && typeof window.claude.use === 'function');
+async function inlineMcp() {
+  if (INLINE.mcp !== undefined) return INLINE.mcp;
+  try { INLINE.mcp = await window.claude.use('mcp'); } catch (_) { INLINE.mcp = null; }
+  return INLINE.mcp;
+}
+function viewOfTile(tile) {
+  const ms = tile.type === 'kpi' ? [tile.metric] : (tile.metrics || []);
+  const first = tile.type !== 'kpi' && S.tileMetric[tile.id] ? [S.tileMetric[tile.id]] : [];
+  for (const n of [...first, ...ms]) { const v = metricOf(n).view; if (v) return v; }
+  return (S.spec.ask && S.spec.ask.view) || null;
+}
+function splitView(fq) { const p = String(fq || '').split('.'); return p.length === 3 ? { DB_NAME: p[0], SCHEMA_NAME: p[1], VIEW_NAME: p[2] } : null; }
+function payloadOf(res) {
+  let p = res && res.payload !== undefined ? res.payload : null;
+  if (p == null) { const t = res && Array.isArray(res.content) ? res.content.find(c => c && c.type === 'text') : null; p = t ? t.text : null; }
+  if (typeof p === 'string') { try { p = JSON.parse(p); } catch (_) { p = { answer: p }; } }
+  return p && typeof p === 'object' ? p : { answer: '' };
+}
+function inlineBold(text) { return text.split(/\*\*(.+?)\*\*/g).map((t, i) => i % 2 ? h('b', { text: t }) : t); }
+function mdLite(text) {                       // paragraphs, bullets, **bold**, pipe tables: built with text nodes, never innerHTML
+  const root = h('div'), lines = String(text || '').split('\n'); let i = 0;
+  while (i < lines.length) {
+    const ln = lines[i].trim();
+    if (!ln) { i++; continue; }
+    if (ln.startsWith('|')) {
+      const rows = []; while (i < lines.length && lines[i].trim().startsWith('|')) { rows.push(lines[i].trim()); i++; }
+      const cells = r => r.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const body = rows.filter(r => !/^\|?[\s:|-]+\|?$/.test(r)).map(cells);
+      if (body.length) root.append(h('table', null, h('thead', null, h('tr', null, ...body[0].map(c => h('th', null, ...inlineBold(c))))),
+        h('tbody', null, ...body.slice(1).map(r => h('tr', null, ...r.map(c => h('td', null, ...inlineBold(c))))))));
+      continue;
+    }
+    if (/^[-*]\s+/.test(ln)) {
+      const items = []; while (i < lines.length && /^[-*]\s+/.test(lines[i].trim())) { items.push(lines[i].trim().replace(/^[-*]\s+/, '')); i++; }
+      root.append(h('ul', null, ...items.map(t => h('li', null, ...inlineBold(t))))); continue;
+    }
+    root.append(h('p', null, ...inlineBold(ln.replace(/^#+\s*/, '')))); i++;
+  }
+  return root;
+}
+function mcpErrorText(e, server) {
+  const code = e && e.code ? e.code : 'unknown';
+  switch (code) {
+    case 'server_not_connected': return `${server} is not connected for you. Add it in claude.ai Settings → Connectors, then ask again.`;
+    case 'needs_reauth': return `The ${server} connection has expired. Reconnect it in claude.ai Settings → Connectors, then ask again.`;
+    case 'approval_required': case 'consent_required': case 'not_granted': return `This page needs your permission to use ${server}. Allow it when prompted, then ask again.`;
+    case 'not_in_manifest': return `This page was published without permission to call that tool on ${server}.`;
+    case 'blocked_by_policy': return `Your organization's policy blocks this connector call.`;
+    case 'cancelled': return 'Cancelled.';
+    case 'tool_error': return `Snowflake reported an error: ${e.message}`;
+    case 'rate_limited': case 'server_unavailable': case 'upstream_error': return `${server} did not answer (${code}). Try again in a moment.`;
+    default: return `The question could not be sent (${code}).`;
+  }
+}
+function renderAnswer(out, p, via) {
+  out.replaceChildren(h('div', { class: 'cap', text: `Answered by ${via.tool} on ${via.view}` }));
+  if (p.answer) out.append(mdLite(p.answer));
+  const r = p.rows;
+  if (r && Array.isArray(r.columns) && Array.isArray(r.data) && r.data.length) {
+    out.append(h('table', null, h('thead', null, h('tr', null, ...r.columns.map(c => h('th', { text: c })))),
+      h('tbody', null, ...r.data.slice(0, 15).map(row => h('tr', null, ...row.map(v => h('td', { text: v == null ? '' : String(v) })))))));
+    if (r.data.length > 15) out.append(h('div', { class: 'muted', text: `Showing 15 of ${r.data.length} rows.` }));
+  }
+  if (p.sql) out.append(h('details', null, h('summary', { text: 'SQL it ran' }), h('pre', { class: 'sqlbox', text: p.sql })));
+}
+
+/* ---------- Explain with AI (dialog) ---------- */
 function openExplain(tile) {
   const ta = h('textarea', { 'aria-label': 'Question for Claude' }); ta.value = explainDefault(tile);
   const ctx = h('input', { type: 'checkbox', checked: true, id: 'ctxchk' });
   const status = h('div', { class: 'muted', style: { marginTop: '6px' } });
-  const send = h('button', { class: 'btn primary', type: 'button', onclick: async () => {
+  const out = h('div', { class: 'ask-out', 'aria-live': 'polite' });
+  const inline = inlineConfigured();
+  let ac = null;
+  const chat = h('button', { class: 'btn' + (inline ? '' : ' primary'), type: 'button', onclick: async () => {
     const text = explainMessage(tile, ta.value.trim() || explainDefault(tile), ctx.checked);
-    send.disabled = true; status.textContent = 'Sending…';
+    chat.disabled = true; status.textContent = 'Sending…';
     try {
       const how = await T.send(text);
       if (how === 'sent') { status.textContent = 'Sent. Claude will answer in the conversation.'; setTimeout(closeModal, 900); }
-      else { send.disabled = false; status.textContent = 'Copied to your clipboard. Paste it into your chat with Claude.'; }
+      else { chat.disabled = false; status.textContent = 'Copied to your clipboard. Paste it into your chat with Claude.'; }
     } catch (e) {
-      send.disabled = false; status.textContent = 'Could not send or copy automatically (' + e.message + '). Select the question above and copy it.'; ta.value = text; ta.select();
+      chat.disabled = false; status.textContent = 'Could not send or copy automatically (' + e.message + '). Select the question above and copy it.'; ta.value = text; ta.select();
     }
-  } }, icon('sparkle'), 'Ask Claude');
+  } }, inline ? null : icon('sparkle'), inline ? 'Ask Claude in chat instead' : 'Ask Claude');
+  const ask = !inline ? null : h('button', { class: 'btn primary', type: 'button', onclick: async () => {
+    const ask_ = S.spec.ask, server = ask_.connector, tool = ask_.tool || 'ask_semantic_view', fq = viewOfTile(tile), view = splitView(fq);
+    if (!view) { out.replaceChildren(h('div', { class: 'bad', text: 'This tile has no queryable semantic view in the snapshot (metric.view is missing). Use "Ask Claude in chat instead".' })); return; }
+    ask.disabled = true; status.textContent = ''; out.replaceChildren(h('div', { class: 'muted', text: `Asking ${server}…` }));
+    const mcp = await inlineMcp();
+    if (!mcp) { ask.disabled = false; out.replaceChildren(h('div', { class: 'bad', text: 'Asking from inside this page is not available here. Use "Ask Claude in chat instead".' })); return; }
+    ac = new AbortController(); const timer = setTimeout(() => ac.abort(), 120000);
+    const cancel = h('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: () => ac.abort() });
+    out.append(cancel);
+    const fl = describeFilters();
+    const question = (ta.value.trim() || explainDefault(tile)) + (fl.length ? ` (Dashboard filters in effect: ${fl.join('; ')}.)` : '');
+    try {
+      const res = await mcp.callTool(server, tool, { QUESTION: question, ...view }, { signal: ac.signal, cache: false });
+      renderAnswer(out, payloadOf(res), { tool, view: fq });
+      const m = document.querySelector('.modal'); if (m) m.style.width = 'min(780px,100%)';
+    } catch (e) {
+      out.replaceChildren(h('div', { class: 'bad', text: mcpErrorText(e, server) }));
+    } finally { clearTimeout(timer); ask.disabled = false; ac = null; }
+  } }, icon('sparkle'), 'Ask Snowflake');
   showModal(h('div', null, h('h2', { text: 'Explain this data' }), h('div', { class: 'muted', text: tile.title }),
     h('div', { class: 'field' }, h('label', { text: 'Question (edit before sending)' }), ta),
-    h('label', { class: 'opt', style: { display: 'flex', gap: '6px', alignItems: 'center' } }, ctx, 'Include dashboard context and the numbers shown'),
-    status, h('div', { class: 'btns' }, h('span'), h('div', { class: 'inline' }, h('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: closeModal }), send))));
+    h('label', { class: 'opt', style: { display: 'flex', gap: '6px', alignItems: 'center' } }, ctx, 'Include dashboard context and the numbers shown (chat only)'),
+    status, h('div', { class: 'btns' }, h('span'), h('div', { class: 'inline' }, h('button', { class: 'btn', type: 'button', text: 'Close', onclick: closeModal }), chat, ask)), out));
   setTimeout(() => ta.focus(), 0);
 }
 

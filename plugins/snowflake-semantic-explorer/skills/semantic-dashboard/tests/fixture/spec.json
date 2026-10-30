@@ -1,0 +1,20 @@
+{
+ "title": "Fixture dashboard",
+ "view": "DB.SCH.V1",
+ "ask": {"connector": "fixture_connector", "tool": "ask_semantic_view"},
+ "catalog": {
+  "metrics": [
+   {"name": "ON_TIME", "label": "On time", "format": "number", "view": "DB.SCH.V1"},
+   {"name": "TOTAL", "label": "Total", "format": "number", "view": "DB.SCH.V1"},
+   {"name": "OTD_RATE", "label": "OTD", "format": "percent", "num": "ON_TIME", "den": "TOTAL", "view": "DB.SCH.V1"}
+  ],
+  "dimensions": [{"name": "MONTH", "label": "Month", "type": "time"}]
+ },
+ "datasets": [{"id": "monthly", "dimensions": ["MONTH"], "metrics": ["ON_TIME", "TOTAL"], "files": ["data.json"]}],
+ "reconcile": [{"dataset": "monthly", "metric": "TOTAL", "total": 300}],
+ "tiles": [
+  {"type": "kpi", "title": "OTD", "metric": "OTD_RATE", "pop": "MoM", "sparkline": true, "value_mode": "latest", "span": 4},
+  {"type": "line", "title": "OTD by month", "metrics": ["OTD_RATE"], "x": "MONTH", "span": 8}
+ ],
+ "filters": [{"dimension": "MONTH", "op": "between", "values": ["2026-01", "2026-02"]}]
+}

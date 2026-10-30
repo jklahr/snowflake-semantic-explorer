@@ -60,6 +60,8 @@ Either of these shapes, or a bare list of row objects:
 **Required:** `title`, `view`, `catalog`, `datasets`. Everything else is optional.
 
 - **catalog.metrics**: `format` is `currency`, `percent` or `number`. `lower_is_better: true` colors an increase red (costs, churn). A ratio has `num` and `den`, both metrics in the catalog; ratios are **not** listed in a dataset's `metrics`; the page computes them from the numerator and denominator wherever both are present.
+- **catalog.metrics[].view** (optional, required when `ask` is set): the fully qualified `DATABASE.SCHEMA.VIEW` that owns the metric. For a ratio, the view that owns its parts. Used by the inline ask to pick the right view per tile.
+- **ask** (optional, top level): `{"connector": "<connector display name>", "tool": "ask_semantic_view", "view": "<default fully qualified view>"}`. Enables **Ask Snowflake** in the ✦ dialog on a page published with the matching `mcp` capability; harmless elsewhere.
 - **catalog.dimensions**: `type` is `time` for exactly one dimension (its values must sort correctly as text: `FY2026-P01`, `2026-03`, `2026-03-15`, `2026Q1`). The grain and periods per year are detected from the values; override with `"time": {"dimension": "...", "grain": "month", "periods_per_year": 12}`.
 - **definitions**: shown in the ⓘ popover. `ontology` comes from the business ontology concept (`concept`, `definition` = its description, `source` = the domain, optional `formula` and `bound_to`). Anything not given is filled from the catalog descriptions.
 - **datasets**: `sql` is the statement the query tool returned (at most 4,000 characters). A dataset lists the dimensions it is grouped by and the (additive) metrics it holds. `partial: true` marks a top-N table that does not cover everything; it can only answer at its own grain and is never used for totals.
@@ -109,4 +111,5 @@ In `changes`, `null` removes a field. Edits are written back into `spec.json`.
 | `ratio ... Put its numerator` | a ratio metric was listed in a dataset; list the numerator and denominator instead |
 | `no dataset provides that` | a tile needs a cut no dataset has; add a dataset, or change or remove the tile |
 | `no complete dataset has them` | a total was asked of a top-N (partial) table; add a complete dataset |
+| `ask must be an object` / `ask is set, so every metric needs a 'view'` / `view must be a fully qualified` | add `ask.connector`, and a three-part `view` on every non-ratio metric (or set `ask.view` as a default) |
 | `more than the ... limit` | too many rows; shorten the period window or drop a dimension |

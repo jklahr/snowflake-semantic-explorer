@@ -210,6 +210,23 @@ def check_catalog(spec: dict[str, Any]) -> None:
         fail("catalog.metrics is empty")
 
 
+def check_ask(spec: dict[str, Any]) -> None:
+    """Inline ask: spec.ask = {connector, tool?, view?}; each metric may carry the fully qualified view that owns it."""
+    a = spec.get("ask")
+    if a is not None:
+        if not isinstance(a, dict) or not isinstance(a.get("connector"), str) or not a["connector"].strip():
+            fail("ask must be an object with a 'connector' (the connector's display name in claude.ai, for example \"my_snowflake\")")
+        a.setdefault("tool", "ask_semantic_view")
+        if a.get("view") is not None and len(str(a["view"]).split(".")) != 3:
+            fail("ask.view must be a fully qualified DATABASE.SCHEMA.VIEW name")
+    for m in spec["catalog"].get("metrics", []):
+        v = m.get("view")
+        if v is not None and len(str(v).split(".")) != 3:
+            fail(f"metric '{m['name']}': view must be a fully qualified DATABASE.SCHEMA.VIEW name (got '{v}')")
+    if a is not None and not (a.get("view") or all(m.get("view") for m in spec["catalog"].get("metrics", []) if not m.get("num"))):
+        fail("ask is set, so every metric needs a 'view' (the fully qualified semantic view that owns it), or set ask.view as a default")
+
+
 def detect_grain(name: str, sample: list[str]) -> tuple[str, int]:
     s = [str(v) for v in sample[:50]]
     if s and all(re.match(r"^\d{4}-\d{2}-\d{2}", v) for v in s):
@@ -562,7 +579,9 @@ def preview(spec: dict[str, Any], datasets: list[dict[str, Any]]) -> list[str]:
             if not ds:
                 continue
             ser = agg(m, ds, True)
-            ps = sorted(ser)
+            tf = next((f for f in spec.get("filters", []) if f.get("dimension") == td and f.get("op") == "between"), None)
+            hi = (tf.get("values") or [None, None])[1] if tf and len(tf.get("values") or []) == 2 else None
+            ps = sorted(p for p in ser if hi is None or str(p) <= str(hi))   # the page applies the default end date, so the preview must too
             cur = next((p for p in reversed(ps) if ser[p]), None)
             if cur is None:
                 continue
@@ -609,6 +628,7 @@ def build(spec_path: Path, out_path: Path | None, ops_path: Path | None, save_sp
         fail("the spec must be a JSON object")
     base = spec_path.parent
     check_catalog(spec)
+    check_ask(spec)
     datasets = resolve_datasets(spec, base)
     log.append("datasets: " + ", ".join(f"{d['id']} ({len(d['rows']):,} rows by {d['dimensions'] or 'total'})" for d in datasets))
 

@@ -29,7 +29,18 @@ Lead with the finding, then support it with 2 to 4 numbers. Separate what the da
 
 ## Showing results
 
-For a small result, use an inline chart. Escalate to the `semantic-dashboard` skill when the user wants to explore, filter, share or revisit the data. Escalate to the `deep-dive` skill when a number needs a causal explanation.
+Show a visual whenever it carries the answer faster than a sentence: a series of three or more periods, a ranking or contribution across three or more categories, or two series compared. Do not chart one or two numbers. Check the tool list first; the names differ by host.
+
+| Result | Use |
+|---|---|
+| A line, bar or scatter of a small, flat result (trend, ranking, one comparison) | the host's native chart tool (for example `chart_display_v0`), one chart per claim |
+| A contribution or waterfall (why did X move), small multiples, two units on one chart, annotation, anything interactive | the host's visual tool (for example Visualizer `show_widget`), after reading its module guidance |
+| Exact values the reader will scan or copy | a compact table |
+| Something the user will explore, filter or revisit | the `semantic-dashboard` skill |
+
+Rules: chart the rows `query_semantic_view` returned, never recomputed or rounded earlier; the title names the metric and unit; the caption says the filters and period; two series share a chart only if they share a unit; do not truncate an axis in a way that exaggerates a change (zoom only a rate that sits far above zero, and show the scale). Put the chart first, then one or two sentences with the takeaway; do not repeat every value in prose. For "why did X move", draw contribution by driver, largest first, and label the part that is mix rather than rate.
+
+**Asking a question of one view.** When the user asks a free-text question about a view, or a tile sends "Explain this data", call `ask_semantic_view` first, on the view that owns the metric, with the question as written. Then confirm the figures you quote with `query_semantic_view`. If it says a dimension is not related to the metric, report that and offer a labelled stand-in; do not fabricate the mapping.
 
 ## Patterns worth knowing
 

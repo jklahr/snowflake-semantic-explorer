@@ -11,11 +11,12 @@ A deep dive is a hypothesis-driven investigation: break a number into its driver
 
 ## Starting point: a tile's "Explain this data" message
 
-A message that begins with a question and then a block headed "Dashboard context" comes from the dashboard's sparkle button. Treat the question as the brief, the metric and dimension names as exact, the active filters as scope, and the figures as already known. Do not just restate them; investigate. Use `ask_semantic_view` on the view named in the context, with the current filter values written into the question in plain words, to find candidate explanations, then confirm every figure you quote with `query_semantic_view`. Say which filters your answer assumes.
+A message that begins with a question and then a block headed "Dashboard context" comes from the dashboard's sparkle button. Treat the question as the brief, the metric and dimension names as exact, the active filters as scope, and the figures as already known. Do not just restate them; investigate. Use `ask_semantic_view` on the view that owns the tile's metric (not the page title, when the dashboard spans several views), with the current filter values written into the question in plain words, to find candidate explanations, then confirm every figure you quote with `query_semantic_view`. This is the default even when an agent tool exists. Say which filters your answer assumes, and draw the decomposition before the prose (see "Showing results" in `analyze-domain`).
 
 ## Choose the engine
 
-1. **Server-side agent run tool (preferred when present).** If the Snowflake MCP server exposes an agent tool (commonly named `agent_run` or similar; check the tool list), hand it a precise investigation brief and let it plan and execute against the semantic views it can reach. Use this for long, multi-step work or when the user wants Snowflake-governed execution and audit.
+0. **Single question or an "Explain this data" message: `ask_semantic_view` first, always.** Escalate to 1 or 2 only if it cannot answer inside one view, or the user asks for an agent by name.
+1. **Server-side agent run tool (for long, multi-step work, if present).** If the Snowflake MCP server exposes an agent tool (commonly named `agent_run` or similar; check the tool list; many servers do not), hand it a precise investigation brief and let it plan and execute against the semantic views it can reach. Use this for long, multi-step work or when the user wants Snowflake-governed execution and audit. If the tool is absent, say so and continue with 0 or 2; do not substitute silently.
 2. **Local investigation with the `deep-dive-analyst` subagent.** If there is no agent tool, or you want the investigation kept out of the main conversation, delegate to the subagent. It uses `query_semantic_view` and `ask_semantic_view` directly.
 
 Tell the user which engine you chose and why, in one sentence.
@@ -46,4 +47,4 @@ A good brief is specific. Include:
 
 Return: the answer in one or two sentences; a ranked list of drivers with figures; what you ruled out; limits of the evidence; and suggested next steps. Keep correlation and causation separate. If the data cannot explain the movement, say so rather than inventing a story.
 
-Offer to add the key finding to the dashboard through the `semantic-dashboard` skill, as a note on the relevant chart.
+Lead with a chart of the ranked drivers when there are three or more, then the evidence. Offer to add the key finding to the dashboard through the `semantic-dashboard` skill, as a note on the relevant chart.

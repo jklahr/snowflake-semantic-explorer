@@ -34,9 +34,13 @@ The list-valued arguments are **JSON strings, not arrays**. The connector reject
 - Scenario trap: use explicitly scoped metrics (`ACTUAL_...`, `BUDGET_...`). An unscoped metric may add scenarios together.
 - Periods with plan but no actuals come back with `0` actuals. They are not "zero revenue".
 
+## A null `fqn` is a privilege problem, not an empty binding
+
+An ontology asset that comes back with `fqn`, `subObjectName`, `entityQualifier` and `targetDataType` all `null`, while `objectType` is `Semantic View` and `validity` is `VALID`, means the caller's role cannot see the target. The same concept returns the full binding to a role that can. Do not conclude the view is missing, and do not guess a substitute. Try `describe_semantic_view` on the view if you can infer it; the error will name the missing privilege. Tell the user which role needs `USAGE` on the schema and `SELECT` on the semantic view (and on the tables beneath it), and resume once granted. An empty `assets` array, by contrast, means nothing is bound.
+
 ## `ask_semantic_view`
 
-Pass the view and one clear question. Prefer a **defined metric**, written `AGG(metric)` in your wording ("what is AGG(ACTUAL_NET_REVENUE) by brand for FY2026?"). Fall back to the tables under the view only when no metric can answer, and say so. Use it to explore or explain; re-run the figures you will quote through `query_semantic_view`.
+It is the default tool for any free-text question about a view, including a dashboard's "Explain this data". It answers inside one view only: a dimension from an entity that is not related to the metric's entity fails with "entities ... are not related"; report that rather than working around it. Pass the view and one clear question. Prefer a **defined metric**, written `AGG(metric)` in your wording ("what is AGG(ACTUAL_NET_REVENUE) by brand for FY2026?"). Fall back to the tables under the view only when no metric can answer, and say so. Use it to explore or explain; re-run the figures you will quote through `query_semantic_view`.
 
 ## The ontology (`business_ontology`)
 
