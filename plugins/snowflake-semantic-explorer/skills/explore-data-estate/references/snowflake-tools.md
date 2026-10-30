@@ -23,13 +23,19 @@ The list-valued arguments are **JSON strings, not arrays**. The connector reject
 |---|---|---|
 | `METRICS` | string containing a JSON list of metric names | `"[\"ACTUAL_NET_REVENUE\"]"` |
 | `DIMENSIONS` | string containing a JSON list | `"[\"FISCAL_PERIOD\",\"BRAND\"]"` or `"[]"` for a total |
-| `FILTERS` | string containing a JSON list of `{dimension, op, values}` | `"[{\"dimension\":\"FISCAL_YEAR\",\"op\":\"=\",\"values\":[\"2026\"]}]"` |
+| `FILTERS` | string containing a JSON list. A named filter from `describe_semantic_view` is a plain string. A comparison is `{dimension, op, values}` | `"[\"IS_COMPLETE_WEEK\",{\"dimension\":\"FISCAL_YEAR\",\"op\":\"=\",\"values\":[\"2026\"]}]"` |
+| `FACTS` | string containing a JSON list of unlabeled fact names. Each is aggregated with SUM. Required by the tool schema | `"[\"ORDER_AMOUNT\"]"` or `"[]"` |
 | `HAVING_FILTERS` | same, applied to metric values after grouping | `"[]"` when unused |
 | `ORDER_BY` | string containing a JSON list of `{name, direction}` | `"[{\"name\":\"ACTUAL_NET_REVENUE\",\"direction\":\"DESC\"}]"` |
 | `ROW_LIMIT`, `DB_NAME`, `SCHEMA_NAME`, `VIEW_NAME` | plain values | `ROW_LIMIT` 1000 |
 
 - `DB_NAME` and `SCHEMA_NAME` are the view's database and schema; `VIEW_NAME` is its name.
-- Filter operators seen to work: `=`, `>=`, `<=`, `LIKE` (use `%`). Compare strings such as fiscal periods with `>=` / `<=`.
+- Filter operators seen to work: `=`, `IN`, `>=`, `<=`, `LIKE` (use `%`). Compare strings such as fiscal periods with `>=` / `<=`.
+- `describe_semantic_view` returns a `filters` array. Each item has kind `dimension` or `fact`. Those names are the plain-string filters.
+- A department-level filter such as `IS_PLANNED_DEPARTMENT` cannot be combined with store-day metrics (traffic, transactions, conversion). Query the two groups separately.
+- Plan attainment and plan metrics often cannot be cut by region. If the call fails, report the plan at its own grain.
+- A comp-day filter on this-year store days cannot be combined with last-year traffic or transactions.
+- Item-level sales (weekly, planned departments) and store-day sales (daily, all departments) differ in scope. Expect a small gap and say so.
 - To change the cut (another dimension, a filter), call again with **one argument changed**. Do not write the statement yourself.
 - The result has `rows` (objects keyed by the names you asked for, upper case) and `sql` (the statement). Keep `sql`; it is the proof the number came from governed metrics.
 - Scenario trap: use explicitly scoped metrics (`ACTUAL_...`, `BUDGET_...`). An unscoped metric may add scenarios together.
@@ -79,7 +85,7 @@ The ontology says what a concept means and where its data lives. A semantic view
 3. **Search only the chosen domain.** If a result comes from another domain, discard it and say so. When a name exists in more than one domain, pass the domain so the right one resolves.
 4. **Read the concept.**
    - `description` is the governed definition; `formula` appears for metrics and states the grain (`... GROUP BY fiscal period, customer, product`); `synonyms` help matching.
-   - `assets` say where the data lives. The same association comes back twice, once from each ontology payload, so collapse rows with the same `associationId`. Read the whole asset object. `objectName`, `description`, and `entityQualifier` are often null, and that does not mean the binding is empty. `fqn` is the semantic view, `subObjectName` is the metric or entity inside it, and `subObjectType` says which. `refType` `SEMANTIC_VIEW` confirms the target. **Prefer an asset whose `objectType` is `Semantic View`.** With `subObjectType` `METRIC`, pass `subObjectName` as the metric. With `ENTITY`, `subObjectName` is the semantic-view entity, not a metric, and `entityQualifier` is its logical table when present. Use a table, view, or column only when no asset has `objectType` `Semantic View`, and say why. Raise `MAX_RESULTS` above 8 when the named concept is missing from the first matches.
+   - `assets` say where the data lives. The same association comes back twice, once from each ontology payload, so collapse rows with the same `associationId`. Read the whole asset object. `objectName`, `description`, and `entityQualifier` are often null, and that does not mean the binding is empty. `fqn` is the semantic view, `subObjectName` is the metric or entity inside it, and `subObjectType` says which. `refType` `SEMANTIC_VIEW` confirms the target. **Prefer an asset whose `objectType` is `Semantic View`.** An asset can have that type and `fqn: null`. The binding exists but names no view; do not treat it as unbound. Find the view by matching the ontology domain and concept names against comments from `list_semantic_views`. If no matching view is visible, stop and tell the user it is most likely a grants or visibility issue. Do not substitute a lookalike view. With `subObjectType` `METRIC`, pass `subObjectName` as the metric. With `ENTITY`, `subObjectName` is the semantic-view entity, not a metric, and `entityQualifier` is its logical table when present. Use a table, view, or column only when no asset has `objectType` `Semantic View`, and say why. Raise `MAX_RESULTS` above 8 when the named concept is missing from the first matches.
    - `relationships` has `edges` and `nodes`. **Edges refer to terms by id** (`sourceTermId`, `targetTermId`); resolve the names through `relationships.nodes`. `truncated: true` means there are more edges than were returned.
 5. **Read edges like this.** An edge is "source *type* target". `direction` is relative to the concept you asked about (`UPSTREAM` = it points at you, `DOWNSTREAM` = you point at it).
 
@@ -94,6 +100,21 @@ The ontology says what a concept means and where its data lives. A semantic view
 
 6. **Read the policy concepts that apply.** A `POLICY_CONCEPT` is a rule. Examples seen: "Actual Scenario Default" (when scenario is not stated, use Actual), "Latest Estimate Is FY2026 Only", "Like-for-Like YTD", "Cross-View Reconciliation" (net revenue must match between two views; a mismatch means a filter or scenario error). Follow `APPLIES_TO` edges to the policies on your concept, apply them and say that you did. Use a reconciliation policy as a check on your own result.
 7. **Check the bound metric is the one you want.** The metric an asset names can be **unscoped across scenarios**. For example the concept "Net Revenue" is bound to `PNL_NET_REVENUE`, which sums Actual, Budget and Latest Estimate together, while `ACTUAL_NET_REVENUE` is the Actual-only twin. Either filter the scenario dimension to the scenario the policies call for (usually Actual), or use the scoped twin, and say which you did and why. Never present an unscoped total as the actual figure.
+
+## Troubleshooting
+
+| Error | Meaning | Fix |
+|---|---|---|
+| 10959 `The entities 'A' and 'B' are not related` | a filter or metric belongs to an entity not joined to the others | drop the filter, or query the two metric groups separately and combine in the reply; say so |
+| 10933 `Metric entity '<X>' does not have a primary or unique key` | the metric cannot be cut by the requested dimension | remove the dimension and report the metric at its own grain |
+| 422 on `ask_governed`, arguments do not match any signature | the call omitted a required argument or used the wrong order | pass every named argument: `QUESTION`, `RUN_TYPE`, `DB_NAME`, `SCHEMA_NAME`, `VIEW_NAME`, `SEMANTIC_VIEWS`, `ONTOLOGY_DOMAINS`, `SENSES` |
+| 400 / 390104 `User must login again` | the connector session expired | tell the user to re-authenticate, and continue with the direct walk |
+
+`QUESTION` is the first argument of `ASK_GOVERNED`. `VIEW_NAME` is optional when `SEMANTIC_VIEWS` names the views. `RUN_TYPE` is `sv`, `sv_ontology`, or `sv_ontology_sense`. If the procedure fails twice, do not retry a third time.
+
+## Discovery cost
+
+`list_semantic_views` and `list_governed_catalog` return the whole account. Call each at most once per conversation and reuse the result. `business_ontology` repeats the domain list on every call; ignore it after the first. When a domain or keyword is known, prefer `SHOW SEMANTIC VIEWS LIKE '%<KEYWORD>%' IN ACCOUNT` through the SQL tool, and say that you used it. Do not print the full list.
 
 ## When a tool is missing or fails
 

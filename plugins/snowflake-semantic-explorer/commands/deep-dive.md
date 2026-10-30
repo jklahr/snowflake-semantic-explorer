@@ -1,8 +1,8 @@
 ---
-description: Investigate why a metric moved or missed plan, using an agentic deep dive
-argument-hint: "[question, e.g. why is net revenue under budget?]"
+description: Investigate why a Snowflake metric moved
+argument-hint: "[question, e.g. why is the west region soft vs last year]"
 ---
 
-Use the `deep-dive` skill to investigate: $ARGUMENTS
+Use the `analyze-domain` skill, then the `deep-dive` skill. The user's question is: $ARGUMENTS
 
-Choose the engine (server agent tool if available, otherwise the `deep-dive-analyst` subagent), write a specific brief, and return ranked drivers with evidence.
+Load `snowflake-start-here` first. State which engine you used, walk the ontology, and close with the graph walked.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- Route every Snowflake question through `snowflake-start-here` before the first query.
+- Require a chart and a "path walked" close on analytical answers. Do not guess a point one more governed query can settle.
+- Make a deep dive a numbered procedure: one governed-agent attempt, then a direct ontology walk, a bridge check, and a seven-part report.
+- Document named filters, the `FACTS` argument, SQL errors 10959 and 10933, and semantic-view assets whose `fqn` is null.
+- Call the account-wide catalog tools at most once per conversation. Offer Cortex Sense only when the catalog returns at least one sense.
+
 ## 0.5.0
 
 - List semantic views, ontology domains, and Cortex Sense contexts with `list_governed_catalog` before choosing what an agent run may use.
