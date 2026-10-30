@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- List semantic views, ontology domains, and Cortex Sense contexts with `list_governed_catalog` before choosing what an agent run may use.
+- Add `ask_governed` run types: semantic views only, views plus ontology, and views plus ontology plus Cortex Sense.
+- Default numbers stay on `query_semantic_view`. Domain discovery and root cause use the ontology.
+- Offer Cortex Sense only when the curated views and ontology cannot answer, and only after the user agrees. A Sense result is exploratory: cite the sense, the document or table, and the definition or SQL.
+
 ## 0.4.0
 
 - Show the right visual for a result: the host chart for a simple series, the host visual tool for contribution and mixed-unit charts, a table for exact values, and a dashboard when the user will explore the result.

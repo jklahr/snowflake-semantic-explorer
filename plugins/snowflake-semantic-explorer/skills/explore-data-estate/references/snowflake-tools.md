@@ -10,7 +10,8 @@ Tool names and arguments below are the ones on the reference server. If yours di
 | `list_semantic_views` | list semantic views, optionally within one database and schema | big accounts have many; filter before showing anything |
 | `describe_semantic_view` | get the **metrics and dimensions** of one view | these names are the only ones you may request later |
 | `query_semantic_view` | run one certified query and get the rows plus the statement it ran | **never pass SQL** |
-| `ask_semantic_view` | answer one plain-language question against one view | for investigation, not for the numbers you will publish |
+| `list_governed_catalog` | list semantic views, ontology domains, and Cortex Sense contexts the caller can attach to a run | call it before `ask_governed` |
+| `ask_governed` | answer one question with an agent run over the objects the caller chose | see "Agent runs" below |
 | SQL tool (`sql_exec_tool` or similar) | last resort only: read-only SQL when no governed tool can answer | say so when you use it |
 | an agent tool (Cortex Agent run) | long, multi-step investigations | see the `deep-dive` skill |
 
@@ -34,13 +35,40 @@ The list-valued arguments are **JSON strings, not arrays**. The connector reject
 - Scenario trap: use explicitly scoped metrics (`ACTUAL_...`, `BUDGET_...`). An unscoped metric may add scenarios together.
 - Periods with plan but no actuals come back with `0` actuals. They are not "zero revenue".
 
-## A null `fqn` is a privilege problem, not an empty binding
-
-An ontology asset that comes back with `fqn`, `subObjectName`, `entityQualifier` and `targetDataType` all `null`, while `objectType` is `Semantic View` and `validity` is `VALID`, means the caller's role cannot see the target. The same concept returns the full binding to a role that can. Do not conclude the view is missing, and do not guess a substitute. Try `describe_semantic_view` on the view if you can infer it; the error will name the missing privilege. Tell the user which role needs `USAGE` on the schema and `SELECT` on the semantic view (and on the tables beneath it), and resume once granted. An empty `assets` array, by contrast, means nothing is bound.
-
 ## `ask_semantic_view`
 
-It is the default tool for any free-text question about a view, including a dashboard's "Explain this data". It answers inside one view only: a dimension from an entity that is not related to the metric's entity fails with "entities ... are not related"; report that rather than working around it. Pass the view and one clear question. Prefer a **defined metric**, written `AGG(metric)` in your wording ("what is AGG(ACTUAL_NET_REVENUE) by brand for FY2026?"). Fall back to the tables under the view only when no metric can answer, and say so. Use it to explore or explain; re-run the figures you will quote through `query_semantic_view`.
+Pass the view and one clear question. Prefer a **defined metric**, written `AGG(metric)` in your wording ("what is AGG(ACTUAL_NET_REVENUE) by brand for FY2026?"). Fall back to the tables under the view only when no metric can answer, and say so. Use it to explore or explain; re-run the figures you will quote through `query_semantic_view`.
+
+## `list_governed_catalog`
+
+No arguments. Returns three lists for this caller:
+
+- `semantic_views`: each has `qualified_name` (`database.schema.view`) and `comment`.
+- `ontology_domains`: the domains this caller can read, from the glossary summary.
+- `senses`: each has `qualified_name` in the form `database.schema.name`.
+
+Show these when the user is choosing what an agent run may touch. Do not invent a name that is not in the list.
+
+## Agent runs (`ask_governed`)
+
+`RUN_TYPE` chooses the tools. `SEMANTIC_VIEWS`, `ONTOLOGY_DOMAINS`, and `SENSES` are JSON **strings**, same as the list arguments of `query_semantic_view`.
+
+| `RUN_TYPE` | Tools the run gets | When |
+|---|---|---|
+| `sv` | the named semantic views only | the user wants an agent answer from curated views and nothing else |
+| `sv_ontology` | those views plus business ontology search | domain discovery and root-cause questions that stay inside governed definitions |
+| `sv_ontology_sense` | those tools plus Cortex Sense, which may also run SQL | only after the user agrees to an exploratory search |
+
+- Pass views as `"[\"DB.SCHEMA.VIEW\"]"`. One view can also go in `VIEW_NAME` with `DB_NAME` and `SCHEMA_NAME`.
+- Pass domains as `"[\"cpg_domain\"]"`. The platform search is account-wide once ontology is on; the procedure tells the agent to discard other domains, but that is an instruction, not a hard filter.
+- Pass senses as `"[\"DB.SCHEMA.NAME\"]"`, from `list_governed_catalog`. `sv_ontology_sense` fails without at least one. `context_names` is also not a hard filter; the answer must ignore documents from any other sense.
+- A `sv_ontology_sense` result is **exploratory, not certified**. The answer must cite the sense name, the document or table, and the definition or SQL fragment, and must say the number is not a governed metric. Do not publish it as if it came from a semantic view.
+
+## Default path
+
+Numbers come from `query_semantic_view`. Use `business_ontology` to find the domain, the concept, and the drivers before choosing that view. Use `ask_semantic_view` or `ask_governed` with `RUN_TYPE` `sv` only when a certified query cannot express the question, then re-run any figure you will quote.
+
+If neither the views nor the ontology can answer, stop and ask: "Do you want me to use Cortex Sense to look further? Those results are not certified or curated. They search a broader set of data." Do not call `sv_ontology_sense` until the user says yes. Then cite sources and repeat that the result is exploratory.
 
 ## The ontology (`business_ontology`)
 

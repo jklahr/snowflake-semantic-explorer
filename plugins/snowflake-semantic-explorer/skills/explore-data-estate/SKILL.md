@@ -17,7 +17,7 @@ Accounts often hold dozens to hundreds of semantic views, many of them demos, co
 4. **Read the comments as guidance.** View comments often say "START HERE", "superseded by X", "excludes internal accounts", "actuals run through period N". Prefer the non-legacy, non-test view and say why you skipped others.
 5. **Describe the shortlisted view(s)** with `describe_semantic_view` to get metrics and dimensions. If it fails, retry once, then use the SQL fallback in the tools reference and tell the user the metadata call failed.
 6. **Summarize each candidate in a compact card:** what it is for (with the governed definition if the ontology has one), grain, time coverage, 4 to 6 headline metrics, key dimensions, and caveats (scenario splits, internal accounts, currency not converted).
-7. **Offer next steps** that match what you found: analyze a domain, build a dashboard, or follow a relationship to a related domain.
+7. **Offer next steps** that match what you found: analyze a domain, build a dashboard, or follow a relationship to a related domain. If the user asks something the views and ontology do not cover, call `list_governed_catalog` and show the senses, then ask: "Do you want me to use Cortex Sense to look further? Those results are not certified or curated. They search a broader set of data." Do not call `ask_governed` with `sv_ontology_sense` until they say yes. Any result from that run must cite the sense, the document or table, and the definition or SQL, and must say it is exploratory.
 
 ## Output style
 
